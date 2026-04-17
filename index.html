@@ -709,9 +709,64 @@ window.showShop = function(id) {
         reviewsHTML = '<div style="padding:12px 18px;font-size:12px;color:#A09080;">No Google reviews available.</div>';
       }
 
-      body.innerHTML = reviewsHTML + `<div id="recent-activity-section"></div>`;
+      body.innerHTML = `
+        <div class="dropdown-section">
+          <div class="dropdown-header" onclick="toggleDropdown('dd-premium')">
+            <span>⚙ Shop details <span class="premium-badge">👑 Premium</span></span>
+            <span class="dropdown-arrow open" id="arr-dd-premium">▼</span>
+          </div>
+          <div class="dropdown-body" id="dd-premium">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 18px 14px;">
+              <div style="background:white;border-radius:10px;padding:10px;border:0.5px solid rgba(28,15,6,0.08);">
+                <div style="font-size:16px;font-weight:500;color:var(--esp);">~50</div>
+                <div style="font-size:10px;color:#A09080;margin-top:2px;">Mbps wifi</div>
+              </div>
+              <div style="background:white;border-radius:10px;padding:10px;border:0.5px solid rgba(28,15,6,0.08);">
+                <div style="font-size:16px;font-weight:500;color:var(--esp);">6+</div>
+                <div style="font-size:10px;color:#A09080;margin-top:2px;">Outlets</div>
+              </div>
+              <div style="background:white;border-radius:10px;padding:10px;border:0.5px solid rgba(28,15,6,0.08);">
+                <div style="font-size:16px;font-weight:500;color:var(--esp);">Moderate</div>
+                <div style="font-size:10px;color:#A09080;margin-top:2px;">Noise level</div>
+              </div>
+              <div style="background:white;border-radius:10px;padding:10px;border:0.5px solid rgba(28,15,6,0.08);">
+                <div style="font-size:16px;font-weight:500;color:var(--esp);">8am–6pm</div>
+                <div style="font-size:10px;color:#A09080;margin-top:2px;">Laptop hours</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dropdown-section">
+          <div class="dropdown-header" onclick="toggleDropdown('dd-activity')">
+            <span>Recent activity</span>
+            <span class="dropdown-arrow open" id="arr-dd-activity">▼</span>
+          </div>
+          <div class="dropdown-body" id="dd-activity">
+            <div id="recent-activity-section"></div>
+          </div>
+        </div>
+        <div class="dropdown-section">
+          <div class="dropdown-header" onclick="toggleDropdown('dd-reviews')">
+            <span>Google reviews</span>
+            <span class="dropdown-arrow" id="arr-dd-reviews">▼</span>
+          </div>
+          <div class="dropdown-body" id="dd-reviews" style="display:none;">
+            ${reviewsHTML}
+          </div>
+        </div>
+      `;
     } else {
-      body.innerHTML = `<div id="recent-activity-section"></div>`;
+      body.innerHTML = `
+        <div class="dropdown-section">
+          <div class="dropdown-header" onclick="toggleDropdown('dd-activity')">
+            <span>Recent activity</span>
+            <span class="dropdown-arrow open" id="arr-dd-activity">▼</span>
+          </div>
+          <div class="dropdown-body" id="dd-activity">
+            <div id="recent-activity-section"></div>
+          </div>
+        </div>
+      `;
     }
 
     // Live STOA check-ins for this shop
