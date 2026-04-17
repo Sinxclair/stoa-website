@@ -226,8 +226,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
       <!-- SHOP DETAIL VIEW -->
       <div class="panel-view" id="view-shop">
-        <div id="shop-hdr-area"></div>
-        <div class="panel-scroll" id="shop-body"></div>
+        <div class="panel-scroll" id="shop-scroll">
+          <div id="shop-hdr-area"></div>
+          <div id="shop-body"></div>
+        </div>
       </div>
 
       <!-- PROFILE VIEW -->
@@ -602,6 +604,10 @@ window.showShop = function(id) {
   const color = occColor(s.occ);
   const isEstimate = s.googleDefault !== false;
   
+  // Scroll to top when opening a shop
+  const shopScroll = document.getElementById('shop-scroll');
+  if (shopScroll) shopScroll.scrollTop = 0;
+
   document.getElementById('shop-hdr-area').innerHTML = `
     <div class="shop-hdr">
       <div class="back-link" onclick="showNearby()">← Back to nearby</div>
@@ -621,10 +627,11 @@ window.showShop = function(id) {
       <div class="stat-card"><div class="stat-val" style="font-size:13px;color:${color};">${s.occ.charAt(0).toUpperCase()+s.occ.slice(1)}</div><div class="stat-key">Right now</div></div>
       <div class="stat-card"><div class="stat-val">15m</div><div class="stat-key">Refresh rate</div></div>
     </div>
-    <button class="checkin-now-btn" onclick="openCI('${id}')">Check in here</button>
+    <div id="shop-open-status"></div>
+    <div id="shop-photos"></div>
+    <button class="checkin-now-btn" id="shop-checkin-btn" onclick="openCI('${id}')">Check in here</button>
   `;
 
-  // Load Google reviews + photos via Places Details
   const body = document.getElementById('shop-body');
   body.innerHTML = '<div class="empty-state" style="padding:20px;">Loading reviews…</div>';
   
@@ -633,23 +640,38 @@ window.showShop = function(id) {
     fields: ['reviews','photos','opening_hours','formatted_phone_number','website']
   }, (place, status) => {
     let reviewsHTML = '';
-    let photosHTML = '';
-    
+    let isShopOpen = true; // default to open
+
     if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-      // Photos strip
-      if (place.photos && place.photos.length) {
-        const photoUrls = place.photos.slice(0,5).map(p => p.getUrl({maxWidth:300,maxHeight:200}));
-        photosHTML = `
-          <div style="display:flex;gap:6px;overflow-x:auto;padding:10px 18px;scrollbar-width:none;">
-            ${photoUrls.map(url=>`<img src="${url}" style="height:100px;width:150px;object-fit:cover;border-radius:8px;flex-shrink:0;" />`).join('')}
-          </div>`;
-      }
-      
-      // Hours
-      let hoursHTML = '';
+      // Check if open and update the status + button
       if (place.opening_hours) {
-        const isOpen = place.opening_hours.isOpen();
-        hoursHTML = `<div style="padding:6px 18px 0;font-size:12px;color:${isOpen?'#5C7A5F':'#B5511A'};font-weight:500;">${isOpen?'Open now':'Closed now'}</div>`;
+        isShopOpen = place.opening_hours.isOpen();
+        const statusEl = document.getElementById('shop-open-status');
+        if (statusEl) {
+          statusEl.innerHTML = `<div style="padding:8px 18px 0;font-size:12px;font-weight:500;color:${isShopOpen?'#5C7A5F':'#B5511A'};">
+            ${isShopOpen ? '● Open now' : '● Closed right now'}
+          </div>`;
+        }
+        // Grey out and disable check-in button if closed
+        const btn = document.getElementById('shop-checkin-btn');
+        if (btn && !isShopOpen) {
+          btn.style.background = '#C0B4A8';
+          btn.style.cursor = 'not-allowed';
+          btn.textContent = 'Closed right now';
+          btn.onclick = null;
+          s.isClosed = true;
+        }
+      }
+
+      // Photos strip — inject into dedicated slot above button
+      if (place.photos && place.photos.length) {
+        const photoUrls = place.photos.slice(0,6).map(p => p.getUrl({maxWidth:320,maxHeight:220}));
+        const photosEl = document.getElementById('shop-photos');
+        if (photosEl) {
+          photosEl.innerHTML = `<div style="display:flex;gap:6px;overflow-x:auto;padding:10px 18px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+            ${photoUrls.map(url=>`<img src="${url}" style="height:90px;width:135px;object-fit:cover;border-radius:8px;flex-shrink:0;" />`).join('')}
+          </div>`;
+        }
       }
 
       // Google reviews
@@ -659,7 +681,7 @@ window.showShop = function(id) {
           ${place.reviews.slice(0,4).map(r => `
             <div class="review-item">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-                <img src="${r.profile_photo_url||''}" onerror="this.style.display='none'" style="width:26px;height:26px;border-radius:50%;object-fit:cover;" />
+                <img src="${r.profile_photo_url||''}" onerror="this.style.display='none'" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
                 <div>
                   <div style="font-size:12px;font-weight:500;color:var(--esp);">${r.author_name}</div>
                   <div style="font-size:10px;color:#A09080;">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)} · ${r.relative_time_description}</div>
@@ -669,10 +691,10 @@ window.showShop = function(id) {
             </div>
           `).join('')}`;
       } else {
-        reviewsHTML = '<div class="empty-state" style="padding:16px 18px;">No Google reviews available.</div>';
+        reviewsHTML = '<div style="padding:12px 18px;font-size:12px;color:#A09080;">No Google reviews available.</div>';
       }
-      
-      body.innerHTML = hoursHTML + photosHTML + reviewsHTML + `<div id="recent-activity-section"></div>`;
+
+      body.innerHTML = reviewsHTML + `<div id="recent-activity-section"></div>`;
     } else {
       body.innerHTML = `<div id="recent-activity-section"></div>`;
     }
@@ -720,16 +742,17 @@ function renderNearbyList() {
   el.innerHTML = shops.slice(0,20).map(s => {
     const color = occColor(s.occ);
     const cap = s.occ.charAt(0).toUpperCase()+s.occ.slice(1);
-    return `<div class="nearby-row" onclick="showShop('${s.id}')">
+    const isClosed = s.isClosed;
+    return `<div class="nearby-row" onclick="showShop('${s.id}')" style="${isClosed?'opacity:0.45;':''}">
       <div class="nearby-icon">☕</div>
       <div class="nearby-info">
         <div class="nearby-name">${s.name}</div>
         <div class="nearby-addr">${s.addr}</div>
-        ${s.reports>0?`<div class="nearby-reports">${s.reports} user report${s.reports!==1?'s':''}</div>`:`<div class="nearby-reports" style="font-style:italic;">Est. from Google data</div>`}
+        ${isClosed ? '<div class="nearby-reports" style="color:#B5511A;">Closed now</div>' : s.reports>0?`<div class="nearby-reports">${s.reports} user report${s.reports!==1?'s':''}</div>`:`<div class="nearby-reports" style="font-style:italic;">Est. from Google data</div>`}
       </div>
       <div class="nearby-right">
         <div class="nearby-pill" style="background:${color}1a;color:${color};">${cap}</div>
-        <div class="nearby-checkin-btn" onclick="event.stopPropagation();openCI('${s.id}')">Check in</div>
+        ${!isClosed ? `<div class="nearby-checkin-btn" onclick="event.stopPropagation();openCI('${s.id}')">Check in</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -807,6 +830,8 @@ async function renderProfile(uid, name, isMe) {
 // ── Check in ──
 window.openCI = function(shopId) {
   if (!currentUser) { showPanel('auth'); toast('Sign in to check in!'); return; }
+  const shopForCI = shopId ? shops.find(x=>x.id===shopId) : null;
+  if (shopForCI && shopForCI.isClosed) { toast('This shop is currently closed'); return; }
   currentShopId = shopId;
   const s = shopId ? shops.find(x=>x.id===shopId) : null;
   document.getElementById('ci-title').textContent = s ? `Check in at ${s.name}` : 'Check in';
