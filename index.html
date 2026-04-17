@@ -91,6 +91,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .nearby-pill{font-size:10px;font-weight:500;padding:3px 8px;border-radius:20px;white-space:nowrap;}
 .nearby-checkin-btn{font-size:10px;font-weight:500;color:var(--gold);cursor:pointer;padding:2px 0;}
 .nearby-checkin-btn:hover{text-decoration:underline;}
+.review-item{padding:12px 18px;border-bottom:1px solid rgba(28,15,6,0.05);}
 
 /* PROFILE */
 .profile-hero{padding:18px 18px 14px;text-align:center;background:white;border-bottom:1px solid rgba(28,15,6,0.06);}
@@ -599,55 +600,115 @@ window.showShop = function(id) {
   showPanel('shop');
   setActiveTab(null);
   const color = occColor(s.occ);
+  const isEstimate = s.googleDefault !== false;
+  
   document.getElementById('shop-hdr-area').innerHTML = `
     <div class="shop-hdr">
       <div class="back-link" onclick="showNearby()">← Back to nearby</div>
       <div class="shop-name">☕ ${s.name}</div>
       <div class="shop-addr">${s.addr}</div>
+      ${s.rating ? `<div style="font-size:12px;color:#8A7A6A;margin-top:4px;">★ ${s.rating} · ${s.ratingCount?.toLocaleString()||0} Google reviews</div>` : ''}
     </div>
     <div class="occ-block">
-      <div class="occ-meta"><span>Occupancy</span><span style="color:${color};font-weight:500;">${s.pct}%</span></div>
+      <div class="occ-meta">
+        <span>Occupancy ${isEstimate?'<span style="font-size:9px;color:#B0A090;font-style:italic;">(est. from Google)</span>':''}</span>
+        <span style="color:${color};font-weight:500;">${s.pct}%</span>
+      </div>
       <div class="occ-track"><div class="occ-fill" style="width:${s.pct}%;background:${color};"></div></div>
     </div>
     <div class="stat-grid">
-      <div class="stat-card"><div class="stat-val">${s.reports}</div><div class="stat-key">Reports today</div></div>
+      <div class="stat-card"><div class="stat-val">${s.reports}</div><div class="stat-key">User reports</div></div>
       <div class="stat-card"><div class="stat-val" style="font-size:13px;color:${color};">${s.occ.charAt(0).toUpperCase()+s.occ.slice(1)}</div><div class="stat-key">Right now</div></div>
       <div class="stat-card"><div class="stat-val">15m</div><div class="stat-key">Refresh rate</div></div>
     </div>
     <button class="checkin-now-btn" onclick="openCI('${id}')">Check in here</button>
   `;
 
-  // Live check-ins for this shop (client-side sort to avoid index)
-  const q = query(collection(db,'checkins'), where('shopId','==',id), limit(20));
-  onSnapshot(q, snap => {
-    let items = snap.docs.map(d=>({id:d.id,...d.data()}));
-    items.sort((a,b)=>{
-      const ta=a.createdAt?.toMillis?.()|| 0;
-      const tb=b.createdAt?.toMillis?.()|| 0;
-      return tb-ta;
+  // Load Google reviews + photos via Places Details
+  const body = document.getElementById('shop-body');
+  body.innerHTML = '<div class="empty-state" style="padding:20px;">Loading reviews…</div>';
+  
+  placesService.getDetails({
+    placeId: id,
+    fields: ['reviews','photos','opening_hours','formatted_phone_number','website']
+  }, (place, status) => {
+    let reviewsHTML = '';
+    let photosHTML = '';
+    
+    if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+      // Photos strip
+      if (place.photos && place.photos.length) {
+        const photoUrls = place.photos.slice(0,5).map(p => p.getUrl({maxWidth:300,maxHeight:200}));
+        photosHTML = `
+          <div style="display:flex;gap:6px;overflow-x:auto;padding:10px 18px;scrollbar-width:none;">
+            ${photoUrls.map(url=>`<img src="${url}" style="height:100px;width:150px;object-fit:cover;border-radius:8px;flex-shrink:0;" />`).join('')}
+          </div>`;
+      }
+      
+      // Hours
+      let hoursHTML = '';
+      if (place.opening_hours) {
+        const isOpen = place.opening_hours.isOpen();
+        hoursHTML = `<div style="padding:6px 18px 0;font-size:12px;color:${isOpen?'#5C7A5F':'#B5511A'};font-weight:500;">${isOpen?'Open now':'Closed now'}</div>`;
+      }
+
+      // Google reviews
+      if (place.reviews && place.reviews.length) {
+        reviewsHTML = `
+          <div class="sec-label">Google reviews</div>
+          ${place.reviews.slice(0,4).map(r => `
+            <div class="review-item">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+                <img src="${r.profile_photo_url||''}" onerror="this.style.display='none'" style="width:26px;height:26px;border-radius:50%;object-fit:cover;" />
+                <div>
+                  <div style="font-size:12px;font-weight:500;color:var(--esp);">${r.author_name}</div>
+                  <div style="font-size:10px;color:#A09080;">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)} · ${r.relative_time_description}</div>
+                </div>
+              </div>
+              <div style="font-size:12px;color:#6A5A4A;line-height:1.5;">${r.text.slice(0,200)}${r.text.length>200?'…':''}</div>
+            </div>
+          `).join('')}`;
+      } else {
+        reviewsHTML = '<div class="empty-state" style="padding:16px 18px;">No Google reviews available.</div>';
+      }
+      
+      body.innerHTML = hoursHTML + photosHTML + reviewsHTML + `<div id="recent-activity-section"></div>`;
+    } else {
+      body.innerHTML = `<div id="recent-activity-section"></div>`;
+    }
+
+    // Live STOA check-ins for this shop
+    const q = query(collection(db,'checkins'), where('shopId','==',id), limit(20));
+    onSnapshot(q, snap => {
+      let items = snap.docs.map(d=>({id:d.id,...d.data()}));
+      items.sort((a,b)=>{
+        const ta=a.createdAt?.toMillis?.()|| 0;
+        const tb=b.createdAt?.toMillis?.()|| 0;
+        return tb-ta;
+      });
+      items = items.slice(0,10);
+      const actSection = document.getElementById('recent-activity-section');
+      if (!actSection) return;
+      actSection.innerHTML = `<div class="sec-label">Recent check-ins</div>` +
+        (items.length ? items.map(item => {
+          const isAnon = item.anonymous;
+          const dName = isAnon ? 'anonymous' : (item.userDisplayName||'someone');
+          const initials = isAnon ? '?' : dName.slice(0,2).toUpperCase();
+          const avColor = isAnon ? '#8A7A6A' : stringToColor(item.userId||'x');
+          const occC = occColor(item.occ);
+          const tags = item.tags||[];
+          const timeStr = item.createdAt ? timeAgo(item.createdAt.toDate()) : 'just now';
+          return `<div class="feed-item">
+            <div class="av" style="background:${avColor};">${initials}</div>
+            <div class="feed-body">
+              <span class="feed-user">${dName}</span>
+              <span> · <span style="color:${occC};font-weight:500;">${item.occ}</span></span>
+              ${tags.length?`<div class="feed-tags-row">${tags.map(t=>`<span class="ftag">${t}</span>`).join('')}</div>`:''}
+              <div class="feed-time">${timeStr}</div>
+            </div>
+          </div>`;
+        }).join('') : '<div class="empty-state" style="padding:16px 18px 24px;">No check-ins yet — be the first!</div>');
     });
-    items = items.slice(0,10);
-    const body = document.getElementById('shop-body');
-    if (!body) return;
-    body.innerHTML = `<div class="sec-label">Recent activity</div>` +
-      (items.length ? items.map(item => {
-        const isAnon = item.anonymous;
-        const displayName = isAnon ? 'anonymous' : (item.userDisplayName||'someone');
-        const initials = isAnon ? '?' : displayName.slice(0,2).toUpperCase();
-        const color = isAnon ? '#8A7A6A' : stringToColor(item.userId||'x');
-        const occC = occColor(item.occ);
-        const tags = item.tags||[];
-        const timeStr = item.createdAt ? timeAgo(item.createdAt.toDate()) : 'just now';
-        return `<div class="feed-item">
-          <div class="av" style="background:${color};">${initials}</div>
-          <div class="feed-body">
-            <span class="feed-user">${displayName}</span>
-            <span> · <span style="color:${occC};font-weight:500;">${item.occ}</span></span>
-            ${tags.length?`<div class="feed-tags-row">${tags.map(t=>`<span class="ftag">${t}</span>`).join('')}</div>`:''}
-            <div class="feed-time">${timeStr}</div>
-          </div>
-        </div>`;
-      }).join('') : '<div class="empty-state">No check-ins yet.<br>Be the first!</div>');
   });
 };
 
@@ -765,7 +826,12 @@ window.toggleVibe = function(el,tag){ selectedVibes.has(tag)?(selectedVibes.dele
 window.toggleAnon = function(){ anonMode=!anonMode; document.getElementById('anon-sw').classList.toggle('on',anonMode); };
 
 window.submitCI = async function() {
-  if (!currentUser) { toast('Sign in first!'); return; }
+  if (!currentUser) { 
+    document.getElementById('ci-overlay').classList.remove('open');
+    showPanel('auth');
+    toast('Sign in first!'); 
+    return; 
+  }
   const btn = document.getElementById('ci-submit-btn');
   btn.innerHTML = '<span class="loading-spinner"></span>Saving…';
   btn.disabled = true;
@@ -775,6 +841,9 @@ window.submitCI = async function() {
   const displayName = currentUser.displayName || currentUser.email.split('@')[0];
 
   try {
+    // Force token refresh to ensure auth is current
+    await currentUser.getIdToken(true);
+    
     const checkinData = {
       userId: currentUser.uid,
       userDisplayName: anonMode ? null : displayName,
@@ -791,6 +860,7 @@ window.submitCI = async function() {
     if (shop) {
       shop.occ = selectedOcc;
       shop.pct = occPct(selectedOcc);
+      shop.googleDefault = false;
       shop.reports = (shop.reports||0) + 1;
       clearMarkers();
       shops.forEach(s=>dropMarker(s));
@@ -798,10 +868,15 @@ window.submitCI = async function() {
     }
     document.getElementById('ci-overlay').classList.remove('open');
     toast('Check-in saved! 🎉');
-    showNearby();
+    if (shopId) showShop(shopId);
+    else showNearby();
   } catch(e) {
-    console.error('Check-in error:', e);
-    toast('Error: ' + (e.message||'try again'));
+    console.error('Check-in error:', e.code, e.message);
+    if(e.code === 'permission-denied') {
+      toast('Permission denied — make sure Firestore rules allow writes');
+    } else {
+      toast('Error: ' + (e.message||'try again'));
+    }
   } finally {
     btn.innerHTML = 'Submit check-in';
     btn.disabled = false;
