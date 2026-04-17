@@ -435,8 +435,7 @@ function searchNearby(center) {
     location: center,
     radius: 2000,
     type: 'cafe',
-    keyword: 'coffee',
-    openNow: true
+    keyword: 'coffee'
   }, (results, status) => {
     if (status !== google.maps.places.PlacesServiceStatus.OK || !results) return;
     clearMarkers();
@@ -645,21 +644,28 @@ window.showShop = function(id) {
     if (status === google.maps.places.PlacesServiceStatus.OK && place) {
       // Check if open and update the status + button
       if (place.opening_hours) {
-        isShopOpen = place.opening_hours.isOpen();
+        try {
+          isShopOpen = place.opening_hours.isOpen();
+        } catch(e) {
+          isShopOpen = true; // if we can't determine, assume open
+        }
         const statusEl = document.getElementById('shop-open-status');
-        if (statusEl) {
+        if (statusEl && isShopOpen !== null) {
           statusEl.innerHTML = `<div style="padding:8px 18px 0;font-size:12px;font-weight:500;color:${isShopOpen?'#5C7A5F':'#B5511A'};">
             ${isShopOpen ? '● Open now' : '● Closed right now'}
           </div>`;
         }
-        // Grey out and disable check-in button if closed
-        const btn = document.getElementById('shop-checkin-btn');
-        if (btn && !isShopOpen) {
-          btn.style.background = '#C0B4A8';
-          btn.style.cursor = 'not-allowed';
-          btn.textContent = 'Closed right now';
-          btn.onclick = null;
-          s.isClosed = true;
+        // Only disable if explicitly closed
+        if (isShopOpen === false) {
+          const btn = document.getElementById('shop-checkin-btn');
+          if (btn) {
+            btn.style.background = '#C0B4A8';
+            btn.style.cursor = 'not-allowed';
+            btn.textContent = 'Closed right now';
+            btn.onclick = null;
+            s.isClosed = true;
+            renderNearbyList(); // refresh list to grey it out
+          }
         }
       }
 
@@ -742,7 +748,7 @@ function renderNearbyList() {
   el.innerHTML = shops.slice(0,20).map(s => {
     const color = occColor(s.occ);
     const cap = s.occ.charAt(0).toUpperCase()+s.occ.slice(1);
-    const isClosed = s.isClosed;
+    const isClosed = s.isClosed === true; // only true if explicitly confirmed closed by Places API
     return `<div class="nearby-row" onclick="showShop('${s.id}')" style="${isClosed?'opacity:0.45;':''}">
       <div class="nearby-icon">☕</div>
       <div class="nearby-info">
