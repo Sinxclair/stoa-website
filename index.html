@@ -643,7 +643,7 @@ window.showShop = function(id) {
 
     if (status === google.maps.places.PlacesServiceStatus.OK && place) {
       // Only show open/closed if Google has confirmed hours data
-      if (place.opening_hours && place.opening_hours.periods && place.opening_hours.periods.length > 0) {
+      if (false) {
         try {
           isShopOpen = place.opening_hours.isOpen();
           const statusEl = document.getElementById('shop-open-status');
