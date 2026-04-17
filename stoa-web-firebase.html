@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STOA — Find your spot</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --esp:#1C0F06;--cream:#F5EDE0;--warm:#E8D5BC;--gold:#C8922A;
+  --sage:#5C7A5F;--rust:#B5511A;--empty:#5C7A5F;--mod:#C8922A;--full:#B5511A;--blue:#4A90D9;
+}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
+.app{display:flex;flex-direction:column;height:100vh;}
+
+/* TOP BAR */
+.topbar{background:var(--esp);padding:11px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;z-index:50;}
+.logo{font-family:'DM Serif Display',serif;font-size:26px;color:var(--cream);letter-spacing:-0.5px;flex-shrink:0;cursor:pointer;}
+.search-wrap{flex:1;position:relative;max-width:380px;}
+.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:rgba(245,237,224,0.4);font-size:14px;pointer-events:none;}
+.search-input{width:100%;background:rgba(245,237,224,0.09);border:1px solid rgba(245,237,224,0.16);border-radius:50px;padding:8px 14px 8px 38px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--cream);outline:none;transition:all 0.2s;}
+.search-input::placeholder{color:rgba(245,237,224,0.35);}
+.search-input:focus{background:rgba(245,237,224,0.14);border-color:rgba(245,237,224,0.36);}
+.tb-actions{display:flex;gap:7px;margin-left:auto;}
+.tb-btn{background:rgba(245,237,224,0.08);border:1px solid rgba(245,237,224,0.16);color:var(--cream);border-radius:50px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background 0.15s;display:flex;align-items:center;gap:5px;}
+.tb-btn:hover{background:rgba(245,237,224,0.15);}
+.tb-btn.gold{background:var(--gold);border-color:var(--gold);color:white;}
+.tb-btn.gold:hover{opacity:0.88;}
+.tb-btn.active{background:rgba(245,237,224,0.18);border-color:rgba(245,237,224,0.36);}
+
+/* MAIN */
+.main{display:flex;flex:1;overflow:hidden;position:relative;}
+.map-wrap{flex:1;position:relative;overflow:hidden;}
+#map{position:absolute;inset:0;}
+
+/* LEGEND */
+.legend{position:absolute;bottom:20px;left:16px;background:white;border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:6px;box-shadow:0 2px 12px rgba(28,15,6,0.14);z-index:10;}
+.legend-title{font-size:10px;font-weight:500;color:#8A7A6A;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;}
+.legend-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--esp);}
+.ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+/* PANEL */
+.panel{width:340px;flex-shrink:0;background:var(--cream);border-left:1px solid rgba(28,15,6,0.08);display:flex;flex-direction:column;overflow:hidden;}
+.panel-view{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.panel-view.on{display:flex;}
+.panel-scroll{flex:1;overflow-y:auto;}
+
+/* SHOP DETAIL */
+.shop-hdr{padding:14px 18px 10px;background:white;border-bottom:1px solid rgba(28,15,6,0.06);}
+.back-link{font-size:12px;color:var(--gold);cursor:pointer;margin-bottom:7px;display:inline-block;}
+.back-link:hover{text-decoration:underline;}
+.shop-name{font-family:'DM Serif Display',serif;font-size:20px;color:var(--esp);line-height:1.2;}
+.shop-addr{font-size:12px;color:#8A7A6A;margin-top:3px;}
+.occ-block{padding:13px 18px;background:white;border-bottom:1px solid rgba(28,15,6,0.06);}
+.occ-meta{font-size:10px;font-weight:500;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;display:flex;justify-content:space-between;}
+.occ-track{height:8px;background:rgba(28,15,6,0.08);border-radius:4px;overflow:hidden;}
+.occ-fill{height:100%;border-radius:4px;transition:width 0.5s;}
+.stat-grid{display:flex;gap:8px;padding:12px 18px;}
+.stat-card{flex:1;background:white;border-radius:10px;padding:9px;border:1px solid rgba(28,15,6,0.06);text-align:center;}
+.stat-val{font-size:16px;font-weight:500;color:var(--esp);}
+.stat-key{font-size:10px;color:#A09080;margin-top:2px;}
+.checkin-now-btn{margin:2px 18px 12px;background:var(--esp);color:var(--cream);border:none;border-radius:10px;padding:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;width:calc(100% - 36px);}
+.checkin-now-btn:hover{opacity:0.88;}
+
+/* FEED */
+.sec-label{font-size:10px;font-weight:500;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;padding:12px 18px 5px;flex-shrink:0;}
+.feed-hdr{background:white;border-bottom:1px solid rgba(28,15,6,0.06);padding:14px 18px 10px;}
+.feed-hdr-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--esp);}
+.feed-item{padding:11px 18px;display:flex;gap:9px;align-items:flex-start;border-bottom:1px solid rgba(28,15,6,0.05);}
+.av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:white;flex-shrink:0;cursor:pointer;}
+.feed-body{font-size:12px;color:#6A5A4A;line-height:1.5;}
+.feed-user{font-weight:500;color:var(--esp);cursor:pointer;}
+.feed-user:hover{text-decoration:underline;}
+.feed-shop{color:var(--gold);cursor:pointer;}
+.feed-shop:hover{text-decoration:underline;}
+.feed-time{font-size:10px;color:#A09080;margin-top:2px;}
+.feed-tags-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;}
+.ftag{font-size:10px;background:var(--warm);color:#6A5A4A;padding:2px 7px;border-radius:20px;}
+.friend-badge{font-size:9px;background:#EDF4EE;color:var(--sage);border-radius:10px;padding:1px 5px;margin-left:3px;vertical-align:middle;}
+.empty-state{padding:40px 20px;text-align:center;color:#A09080;font-size:13px;line-height:1.7;}
+
+/* PROFILE */
+.profile-hero{padding:18px 18px 14px;text-align:center;background:white;border-bottom:1px solid rgba(28,15,6,0.06);}
+.profile-av{width:60px;height:60px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;color:white;}
+.profile-name{font-family:'DM Serif Display',serif;font-size:19px;color:var(--esp);}
+.profile-handle{font-size:12px;color:#8A7A6A;margin-top:2px;}
+.profile-stats{display:flex;gap:1px;margin-top:13px;}
+.p-stat{flex:1;text-align:center;padding:9px 0;background:var(--cream);}
+.p-stat:first-child{border-radius:10px 0 0 10px;}
+.p-stat:last-child{border-radius:0 10px 10px 0;}
+.p-val{font-size:15px;font-weight:500;color:var(--esp);}
+.p-key{font-size:10px;color:#A09080;margin-top:1px;}
+.history-row{padding:10px 18px;border-bottom:1px solid rgba(28,15,6,0.05);display:flex;gap:9px;align-items:center;cursor:pointer;}
+.history-row:hover{background:rgba(28,15,6,0.02);}
+
+/* AUTH PANEL */
+.auth-panel{padding:24px 20px;display:flex;flex-direction:column;gap:12px;}
+.auth-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--esp);margin-bottom:4px;}
+.auth-sub{font-size:12px;color:#8A7A6A;margin-bottom:8px;line-height:1.6;}
+.auth-input{width:100%;background:white;border:0.5px solid rgba(28,15,6,0.15);border-radius:10px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--esp);outline:none;transition:border-color 0.15s;}
+.auth-input:focus{border-color:var(--gold);}
+.auth-input::placeholder{color:#B0A090;}
+.auth-btn{width:100%;background:var(--esp);color:var(--cream);border:none;border-radius:10px;padding:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.15s;}
+.auth-btn:hover{opacity:0.88;}
+.auth-btn.google{background:white;color:var(--esp);border:0.5px solid rgba(28,15,6,0.15);display:flex;align-items:center;justify-content:center;gap:8px;}
+.auth-divider{text-align:center;font-size:11px;color:#A09080;position:relative;}
+.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:42%;height:0.5px;background:rgba(28,15,6,0.1);}
+.auth-divider::before{left:0;}
+.auth-divider::after{right:0;}
+.auth-toggle{font-size:12px;color:#8A7A6A;text-align:center;cursor:pointer;}
+.auth-toggle span{color:var(--gold);}
+.auth-toggle span:hover{text-decoration:underline;}
+.auth-error{font-size:11px;color:var(--full);background:#FAECE4;padding:8px 12px;border-radius:8px;display:none;}
+
+/* MODALS */
+.overlay{position:fixed;inset:0;background:rgba(28,15,6,0.48);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.sheet{width:100%;max-width:480px;background:var(--cream);border-radius:20px 20px 0 0;padding:22px 24px 36px;transform:translateY(100%);transition:transform 0.26s cubic-bezier(0.34,1.56,0.64,1);}
+.overlay.open .sheet{transform:translateY(0);}
+.handle{width:36px;height:4px;background:rgba(28,15,6,0.12);border-radius:2px;margin:0 auto 18px;}
+.sheet-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--esp);margin-bottom:4px;}
+.sheet-sub{font-size:12px;color:#8A7A6A;margin-bottom:16px;}
+
+.occ-opts{display:flex;gap:8px;margin-bottom:16px;}
+.occ-opt{flex:1;background:white;border:1.5px solid rgba(28,15,6,0.1);border-radius:12px;padding:11px 6px;text-align:center;cursor:pointer;transition:all 0.15s;}
+.occ-opt-ico{font-size:22px;margin-bottom:4px;}
+.occ-opt-lbl{font-size:11px;font-weight:500;color:#7A6A5A;}
+.occ-opt.sel-empty{border-color:var(--empty);background:#EDF4EE;}
+.occ-opt.sel-moderate{border-color:var(--mod);background:#FDF4E3;}
+.occ-opt.sel-full{border-color:var(--full);background:#FAECE4;}
+
+.vibe-sec{margin-bottom:14px;}
+.vibe-hd{font-size:10px;font-weight:500;color:var(--gold);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;}
+.vibe-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.vibe-chip{padding:5px 11px;border-radius:20px;border:0.5px solid rgba(28,15,6,0.12);font-size:12px;color:#6A5A4A;cursor:pointer;background:white;transition:all 0.15s;}
+.vibe-chip.on{background:var(--esp);color:var(--cream);border-color:var(--esp);}
+
+.anon-row{display:flex;align-items:center;justify-content:space-between;background:white;border-radius:10px;padding:11px 14px;border:0.5px solid rgba(28,15,6,0.08);margin-bottom:14px;}
+.anon-info{font-size:13px;color:var(--esp);}
+.anon-sub{font-size:10px;color:#A09080;margin-top:1px;}
+.sw{width:38px;height:21px;border-radius:11px;background:#D0C4B4;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+.sw.on{background:var(--esp);}
+.sw-k{position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;border-radius:50%;background:white;transition:left 0.2s;}
+.sw.on .sw-k{left:19.5px;}
+
+.form-lbl{font-size:10px;font-weight:500;color:var(--gold);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px;display:block;}
+.form-inp,.form-sel{width:100%;background:white;border:0.5px solid rgba(28,15,6,0.12);border-radius:10px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--esp);outline:none;margin-bottom:12px;transition:border-color 0.15s;}
+.form-inp:focus,.form-sel:focus{border-color:var(--gold);}
+.form-inp::placeholder{color:#B0A090;}
+.form-actions{display:flex;gap:8px;}
+.btn-cancel{flex:1;background:white;border:0.5px solid rgba(28,15,6,0.12);border-radius:10px;padding:12px;font-family:'DM Sans',sans-serif;font-size:13px;color:#8A7A6A;cursor:pointer;}
+.btn-primary{flex:2;background:var(--esp);color:var(--cream);border:none;border-radius:10px;padding:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--esp);color:var(--cream);padding:10px 22px;border-radius:50px;font-size:12px;font-weight:500;opacity:0;transition:all 0.25s;z-index:999;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.loading-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(245,237,224,0.3);border-top-color:var(--cream);border-radius:50%;animation:spin 0.7s linear infinite;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo" onclick="showFeed()">STOA</div>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" id="search-input" type="text" placeholder="Search — Bushwick, Williamsburg…">
+    </div>
+    <div class="tb-actions">
+      <button class="tb-btn active" id="tab-feed" onclick="showFeed()">◎ Activity</button>
+      <button class="tb-btn" id="tab-checkin" onclick="openCI(null)">⊕ Check in</button>
+      <button class="tb-btn" id="tab-profile" onclick="showMyProfile()">◉ Profile</button>
+      <button class="tb-btn gold" onclick="openAdd()">+ Add shop</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="legend">
+        <div class="legend-title">Occupancy</div>
+        <div class="legend-row"><div class="ldot" style="background:var(--empty)"></div>Empty</div>
+        <div class="legend-row"><div class="ldot" style="background:var(--mod)"></div>Moderate</div>
+        <div class="legend-row"><div class="ldot" style="background:var(--full)"></div>Full</div>
+        <div class="legend-row"><div class="ldot" style="background:var(--blue)"></div>Added by users</div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel">
+      <!-- FEED VIEW -->
+      <div class="panel-view on" id="view-feed">
+        <div class="feed-hdr">
+          <div class="feed-hdr-title">Activity</div>
+          <div style="font-size:11px;color:#8A7A6A;margin-top:3px;">Real-time check-ins near you</div>
+        </div>
+        <div class="panel-scroll" id="feed-items">
+          <div class="empty-state">Loading nearby check-ins…</div>
+        </div>
+      </div>
+
+      <!-- SHOP DETAIL VIEW -->
+      <div class="panel-view" id="view-shop">
+        <div id="shop-hdr-area"></div>
+        <div class="panel-scroll" id="shop-body"></div>
+      </div>
+
+      <!-- PROFILE VIEW -->
+      <div class="panel-view" id="view-profile">
+        <div id="profile-hdr-area"></div>
+        <div class="panel-scroll" id="profile-body"></div>
+      </div>
+
+      <!-- AUTH VIEW -->
+      <div class="panel-view" id="view-auth">
+        <div class="auth-panel">
+          <div class="back-link" onclick="showFeed()" style="margin-bottom:0;">← Back</div>
+          <div class="auth-title" id="auth-title">Join STOA</div>
+          <div class="auth-sub">Sign up to check in, see friends' activity, and build your coffee shop history.</div>
+          <div class="auth-error" id="auth-error"></div>
+          <button class="auth-btn google" onclick="signInGoogle()">
+            <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Continue with Google
+          </button>
+          <div class="auth-divider">or</div>
+          <input class="auth-input" id="auth-email" type="email" placeholder="Email address">
+          <input class="auth-input" id="auth-pass" type="password" placeholder="Password">
+          <input class="auth-input" id="auth-name" type="text" placeholder="Display name (e.g. zach_345)" style="display:none;">
+          <button class="auth-btn" id="auth-submit-btn" onclick="submitAuth()">Create account</button>
+          <div class="auth-toggle" id="auth-toggle-link" onclick="toggleAuthMode()">Already have an account? <span>Sign in</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECK IN MODAL -->
+<div class="overlay" id="ci-overlay" onclick="closeCiOutside(event)">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-title" id="ci-title">Check in</div>
+    <div class="sheet-sub" id="ci-sub">Report what you see right now</div>
+    <div class="occ-opts">
+      <div class="occ-opt" onclick="selOcc('empty',this)"><div class="occ-opt-ico">🟢</div><div class="occ-opt-lbl">Empty</div></div>
+      <div class="occ-opt sel-moderate" onclick="selOcc('moderate',this)"><div class="occ-opt-ico">🟡</div><div class="occ-opt-lbl">Moderate</div></div>
+      <div class="occ-opt" onclick="selOcc('full',this)"><div class="occ-opt-ico">🔴</div><div class="occ-opt-lbl">Full</div></div>
+    </div>
+    <div class="vibe-sec">
+      <div class="vibe-hd">Vibe tags <span style="font-weight:300;color:#A09080;">(optional)</span></div>
+      <div class="vibe-grid" id="vibe-grid"></div>
+    </div>
+    <div class="anon-row">
+      <div><div class="anon-info">Go anonymous</div><div class="anon-sub">Friends always see your real name</div></div>
+      <div class="sw" id="anon-sw" onclick="toggleAnon()"><div class="sw-k"></div></div>
+    </div>
+    <button class="btn-primary" style="width:100%;padding:14px;font-size:14px;" id="ci-submit-btn" onclick="submitCI()">Submit check-in</button>
+  </div>
+</div>
+
+<!-- ADD SHOP MODAL -->
+<div class="overlay" id="add-overlay" onclick="closeAddOutside(event)">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-title">Add a coffee shop</div>
+    <div class="sheet-sub">Can't find it on the map? Add it for everyone.</div>
+    <label class="form-lbl">Shop name</label>
+    <input class="form-inp" id="add-name" type="text" placeholder="e.g. Devoción">
+    <label class="form-lbl">Address</label>
+    <input class="form-inp" id="add-addr" type="text" placeholder="69 Grand St, Brooklyn, NY">
+    <label class="form-lbl">Current occupancy</label>
+    <select class="form-sel" id="add-occ">
+      <option value="empty">Empty</option>
+      <option value="moderate" selected>Moderate</option>
+      <option value="full">Full</option>
+    </select>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeAdd()">Cancel</button>
+      <button class="btn-primary" onclick="submitAdd()">Add shop</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, doc, setDoc, getDoc, serverTimestamp, where, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBaKe75EL614ivSw4I-FO-Hf08rqknbn-g",
+  authDomain: "stoa-app-b9d8b.firebaseapp.com",
+  databaseURL: "https://stoa-app-b9d8b-default-rtdb.firebaseio.com",
+  projectId: "stoa-app-b9d8b",
+  storageBucket: "stoa-app-b9d8b.firebasestorage.app",
+  messagingSenderId: "546040471771",
+  appId: "1:546040471771:web:bface1e0680978bdd46cfe"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
+
+// ── Globals ──
+const GKEY = 'AIzaSyBPKyW_DnJ3OXBu6OVOg_BcMjf9O1QUios';
+const VIBES = ['quiet','buzzy','good wifi','no wifi','outlets','natural light','cold brew','cozy','great music','standing desks','dog friendly','good espresso'];
+let map, placesService, geocoder, autocomplete;
+let markers = [];
+let shops = [];
+let userShops = [];
+let currentUser = null;
+let currentShopId = null;
+let selectedOcc = 'moderate';
+let anonMode = false;
+const selectedVibes = new Set();
+let authMode = 'signup';
+let feedUnsub = null;
+
+// ── Auth state ──
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+  updateProfileBtn();
+  if (user) {
+    ensureUserDoc(user);
+  }
+});
+
+async function ensureUserDoc(user) {
+  const ref = doc(db, 'users', user.uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      displayName: user.displayName || user.email.split('@')[0],
+      email: user.email,
+      photoURL: user.photoURL || null,
+      createdAt: serverTimestamp(),
+      checkinCount: 0,
+    });
+  }
+}
+
+function updateProfileBtn() {
+  const btn = document.getElementById('tab-profile');
+  if (currentUser) {
+    const name = currentUser.displayName || currentUser.email.split('@')[0];
+    btn.textContent = '◉ ' + name.split(' ')[0];
+  } else {
+    btn.textContent = '◉ Sign in';
+  }
+}
+
+// ── Map ──
+window.initMap = function() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: {lat:40.6944, lng:-73.9213},
+    zoom: 14,
+    styles: [
+      {elementType:'geometry',stylers:[{color:'#f5ede0'}]},
+      {elementType:'labels.text.fill',stylers:[{color:'#1C0F06'}]},
+      {elementType:'labels.text.stroke',stylers:[{color:'#f5ede0'}]},
+      {featureType:'road',elementType:'geometry',stylers:[{color:'#e8d5bc'}]},
+      {featureType:'road.arterial',elementType:'geometry',stylers:[{color:'#dfc9a8'}]},
+      {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#d4b88a'}]},
+      {featureType:'water',elementType:'geometry',stylers:[{color:'#c9d8e8'}]},
+      {featureType:'poi.park',elementType:'geometry',stylers:[{color:'#d4e6c3'}]},
+      {featureType:'transit',stylers:[{visibility:'off'}]},
+      {featureType:'poi.business',stylers:[{visibility:'off'}]},
+    ],
+    disableDefaultUI:false, zoomControl:true, mapTypeControl:false, streetViewControl:false, fullscreenControl:false,
+  });
+
+  placesService = new google.maps.places.PlacesService(map);
+  geocoder = new google.maps.Geocoder();
+
+  autocomplete = new google.maps.places.Autocomplete(document.getElementById('search-input'), {
+    types:['(regions)'], componentRestrictions:{country:'us'}
+  });
+  autocomplete.addListener('place_changed', () => {
+    const p = autocomplete.getPlace();
+    if (!p.geometry) return;
+    map.panTo(p.geometry.location);
+    map.setZoom(15);
+    searchNearby(p.geometry.location);
+  });
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const loc = {lat:pos.coords.latitude, lng:pos.coords.longitude};
+        map.setCenter(loc);
+        new google.maps.Marker({position:loc, map, title:'You', icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#4A90D9',fillOpacity:1,strokeColor:'white',strokeWeight:2.5}});
+        searchNearby(loc);
+      },
+      () => searchNearby({lat:40.6944, lng:-73.9213})
+    );
+  } else {
+    searchNearby({lat:40.6944, lng:-73.9213});
+  }
+
+  let idleT;
+  map.addListener('idle', () => { clearTimeout(idleT); idleT = setTimeout(() => searchNearby(map.getCenter()), 800); });
+};
+
+function searchNearby(center) {
+  placesService.nearbySearch({location:center, radius:1400, type:'cafe', keyword:'coffee'}, (results, status) => {
+    if (status !== google.maps.places.PlacesServiceStatus.OK || !results) return;
+    clearMarkers();
+    shops = results.map(p => ({
+      id: p.place_id,
+      name: p.name,
+      addr: p.vicinity,
+      lat: p.geometry.location.lat(),
+      lng: p.geometry.location.lng(),
+      occ: 'moderate',
+      pct: 50,
+      reports: 0,
+      isUser: false,
+    }));
+    userShops.forEach(us => { if (!shops.find(s=>s.id===us.id)) shops.push(us); });
+    shops.forEach(s => dropMarker(s));
+    loadOccupancyFromFirestore();
+    listenFeed();
+  });
+}
+
+// ── Load real occupancy from Firestore ──
+async function loadOccupancyFromFirestore() {
+  const shopIds = shops.map(s => s.id);
+  // For each shop, get the most recent check-in within last hour
+  for (const shop of shops) {
+    try {
+      const q = query(
+        collection(db, 'checkins'),
+        where('shopId', '==', shop.id),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        shop.occ = data.occ;
+        shop.pct = occPct(data.occ);
+        shop.reports++;
+        updateMarkerColor(shop);
+      }
+    } catch(e) {}
+  }
+}
+
+function updateMarkerColor(shop) {
+  clearMarkers();
+  shops.forEach(s => dropMarker(s));
+}
+
+function clearMarkers() { markers.forEach(m=>m.setMap(null)); markers=[]; }
+
+function dropMarker(shop) {
+  const color = shop.isUser ? '#4A90D9' : occColor(shop.occ);
+  const marker = new google.maps.Marker({
+    position:{lat:shop.lat, lng:shop.lng}, map, title:shop.name,
+    icon:{path:google.maps.SymbolPath.CIRCLE,scale:11,fillColor:color,fillOpacity:1,strokeColor:'white',strokeWeight:2.5}
+  });
+  const iw = new google.maps.InfoWindow({
+    content:`<div style="font-family:'DM Sans',sans-serif;padding:4px;min-width:120px;">
+      <div style="font-weight:500;font-size:13px;color:#1C0F06;">${shop.name}</div>
+      <div style="font-size:11px;color:#8A7A6A;margin-top:2px;">${shop.addr}</div>
+      <div style="margin-top:6px;display:flex;align-items:center;gap:5px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${color};"></div>
+        <span style="font-size:11px;font-weight:500;color:${color};">${shop.occ.charAt(0).toUpperCase()+shop.occ.slice(1)}</span>
+        <span style="font-size:11px;color:#A09080;">· ${shop.reports} reports</span>
+      </div>
+      <div style="margin-top:7px;font-size:11px;color:#C8922A;cursor:pointer;" onclick="window.showShop('${shop.id}')">View details →</div>
+    </div>`,
+    disableAutoPan:true,
+  });
+  marker.addListener('mouseover', ()=>iw.open(map,marker));
+  marker.addListener('mouseout', ()=>iw.close());
+  marker.addListener('click', ()=>showShop(shop.id));
+  markers.push(marker);
+}
+
+// ── Live feed from Firestore ──
+function listenFeed() {
+  if (feedUnsub) feedUnsub();
+  const q = query(collection(db, 'checkins'), orderBy('createdAt','desc'), limit(40));
+  feedUnsub = onSnapshot(q, snap => {
+    const items = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderFeedItems(items);
+    // Update shop occupancy from latest check-ins
+    const seen = new Set();
+    items.forEach(item => {
+      if (!seen.has(item.shopId)) {
+        seen.add(item.shopId);
+        const shop = shops.find(s=>s.id===item.shopId);
+        if (shop) {
+          shop.occ = item.occ;
+          shop.pct = occPct(item.occ);
+        }
+      }
+    });
+    clearMarkers();
+    shops.forEach(s=>dropMarker(s));
+  });
+}
+
+function renderFeedItems(items) {
+  const el = document.getElementById('feed-items');
+  if (!items.length) {
+    el.innerHTML = '<div class="empty-state">No check-ins yet in this area.<br>Be the first to check in!</div>';
+    return;
+  }
+  el.innerHTML = items.map(item => {
+    const isAnon = item.anonymous;
+    const displayName = isAnon ? 'anonymous' : (item.userDisplayName || 'someone');
+    const initials = isAnon ? '?' : displayName.slice(0,2).toUpperCase();
+    const color = isAnon ? '#8A7A6A' : stringToColor(item.userId || 'x');
+    const occC = occColor(item.occ);
+    const shopName = item.shopName || 'a coffee shop';
+    const shopId = item.shopId;
+    const timeStr = item.createdAt ? timeAgo(item.createdAt.toDate()) : 'just now';
+    const tags = item.tags || [];
+    const isMe = currentUser && item.userId === currentUser.uid;
+    return `<div class="feed-item">
+      <div class="av" style="background:${color};" onclick="${!isAnon&&!isMe?`showUserProfile('${item.userId}','${displayName}')`:''}">${initials}</div>
+      <div class="feed-body">
+        <span class="feed-user" onclick="${!isAnon&&!isMe?`showUserProfile('${item.userId}','${displayName}')`:''}">${isMe?'you':displayName}</span>
+        <span> checked in at <span class="feed-shop" onclick="showShop('${shopId}')">${shopName}</span> as <span style="color:${occC};font-weight:500;">${item.occ}</span></span>
+        ${tags.length?`<div class="feed-tags-row">${tags.map(t=>`<span class="ftag">${t}</span>`).join('')}</div>`:''}
+        <div class="feed-time">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Show shop ──
+window.showShop = function(id) {
+  currentShopId = id;
+  const s = shops.find(x=>x.id===id);
+  if (!s) return;
+  showPanel('shop');
+  setActiveTab(null);
+  const color = occColor(s.occ);
+  document.getElementById('shop-hdr-area').innerHTML = `
+    <div class="shop-hdr">
+      <div class="back-link" onclick="showFeed()">← Back to activity</div>
+      <div class="shop-name">☕ ${s.name}</div>
+      <div class="shop-addr">${s.addr}</div>
+    </div>
+    <div class="occ-block">
+      <div class="occ-meta"><span>Occupancy</span><span style="color:${color};font-weight:500;">${s.pct}%</span></div>
+      <div class="occ-track"><div class="occ-fill" style="width:${s.pct}%;background:${color};"></div></div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">${s.reports}</div><div class="stat-key">Reports today</div></div>
+      <div class="stat-card"><div class="stat-val" style="font-size:13px;color:${color};">${s.occ.charAt(0).toUpperCase()+s.occ.slice(1)}</div><div class="stat-key">Right now</div></div>
+      <div class="stat-card"><div class="stat-val">15m</div><div class="stat-key">Refresh rate</div></div>
+    </div>
+    <button class="checkin-now-btn" onclick="openCI('${id}')">Check in here</button>
+  `;
+
+  // Live check-ins for this shop
+  const q = query(collection(db,'checkins'), where('shopId','==',id), orderBy('createdAt','desc'), limit(10));
+  onSnapshot(q, snap => {
+    const items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const body = document.getElementById('shop-body');
+    if (!body) return;
+    body.innerHTML = `<div class="sec-label">Recent activity</div>` +
+      (items.length ? items.map(item => {
+        const isAnon = item.anonymous;
+        const displayName = isAnon ? 'anonymous' : (item.userDisplayName||'someone');
+        const initials = isAnon ? '?' : displayName.slice(0,2).toUpperCase();
+        const color = isAnon ? '#8A7A6A' : stringToColor(item.userId||'x');
+        const occC = occColor(item.occ);
+        const tags = item.tags||[];
+        const timeStr = item.createdAt ? timeAgo(item.createdAt.toDate()) : 'just now';
+        return `<div class="feed-item">
+          <div class="av" style="background:${color};">${initials}</div>
+          <div class="feed-body">
+            <span class="feed-user">${displayName}</span>
+            <span> · <span style="color:${occC};font-weight:500;">${item.occ}</span></span>
+            ${tags.length?`<div class="feed-tags-row">${tags.map(t=>`<span class="ftag">${t}</span>`).join('')}</div>`:''}
+            <div class="feed-time">${timeStr}</div>
+          </div>
+        </div>`;
+      }).join('') : '<div class="empty-state">No check-ins yet.<br>Be the first!</div>');
+  });
+};
+
+// ── Feed view ──
+window.showFeed = function() {
+  showPanel('feed');
+  setActiveTab('tab-feed');
+  listenFeed();
+};
+
+// ── Profile ──
+window.showMyProfile = function() {
+  if (!currentUser) { showPanel('auth'); setActiveTab('tab-profile'); return; }
+  showPanel('profile');
+  setActiveTab('tab-profile');
+  renderProfile(currentUser.uid, currentUser.displayName || currentUser.email.split('@')[0], true);
+};
+
+window.showUserProfile = async function(uid, name) {
+  showPanel('profile');
+  renderProfile(uid, name, false);
+};
+
+async function renderProfile(uid, name, isMe) {
+  const initials = name.slice(0,2).toUpperCase();
+  const color = stringToColor(uid);
+  document.getElementById('profile-hdr-area').innerHTML = `
+    <div class="profile-hero">
+      <div class="back-link" onclick="showFeed()">← Back</div>
+      <div class="profile-av" style="background:${color};">${initials}</div>
+      <div class="profile-name">${name}</div>
+      <div class="profile-handle">${isMe?currentUser.email:('@'+name.toLowerCase().replace(/\s/g,'_'))}</div>
+      ${isMe?`<button onclick="signOutUser()" style="margin-top:10px;background:transparent;border:0.5px solid rgba(28,15,6,0.15);border-radius:20px;padding:5px 14px;font-size:11px;cursor:pointer;color:#8A7A6A;">Sign out</button>`:''}
+      <div class="profile-stats">
+        <div class="p-stat"><div class="p-val" id="p-count">—</div><div class="p-key">check-ins</div></div>
+        <div class="p-stat"><div class="p-val">public</div><div class="p-key">profile</div></div>
+      </div>
+    </div>
+  `;
+
+  // Fetch check-in history
+  try {
+    const q = query(collection(db,'checkins'), where('userId','==',uid), orderBy('createdAt','desc'), limit(20));
+    const snap = await getDocs(q);
+    const items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('p-count').textContent = items.length;
+    document.getElementById('profile-body').innerHTML =
+      `<div class="sec-label">Check-in history</div>` +
+      (items.length ? items.map(item=>{
+        const occC = occColor(item.occ);
+        const timeStr = item.createdAt?timeAgo(item.createdAt.toDate()):'';
+        const tags = item.tags||[];
+        return `<div class="history-row" onclick="showShop('${item.shopId}')">
+          <div style="font-size:17px;">☕</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:var(--esp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.shopName||'Coffee shop'}</div>
+            <div style="font-size:11px;color:#8A7A6A;margin-top:1px;">${timeStr} · <span style="color:${occC}">${item.occ}</span>${tags.length?' · '+tags.join(', '):''}</div>
+          </div>
+        </div>`;
+      }).join('') : '<div class="empty-state">No check-ins yet.</div>');
+  } catch(e) {
+    document.getElementById('profile-body').innerHTML = '<div class="empty-state">Could not load history.</div>';
+  }
+}
+
+// ── Check in ──
+window.openCI = function(shopId) {
+  if (!currentUser) { showPanel('auth'); toast('Sign in to check in!'); return; }
+  currentShopId = shopId;
+  const s = shopId ? shops.find(x=>x.id===shopId) : null;
+  document.getElementById('ci-title').textContent = s ? `Check in at ${s.name}` : 'Check in';
+  document.getElementById('ci-sub').textContent = s ? s.addr : 'Report what you see right now';
+  selectedOcc='moderate'; anonMode=false; selectedVibes.clear();
+  document.getElementById('anon-sw').classList.remove('on');
+  document.querySelectorAll('.occ-opt').forEach(o=>o.className='occ-opt');
+  document.querySelectorAll('.occ-opt')[1].classList.add('sel-moderate');
+  renderVibes();
+  document.getElementById('ci-overlay').classList.add('open');
+};
+
+window.closeCiOutside = function(e){ if(e.target===document.getElementById('ci-overlay')) document.getElementById('ci-overlay').classList.remove('open'); };
+window.selOcc = function(l,el){ selectedOcc=l; document.querySelectorAll('.occ-opt').forEach(o=>o.className='occ-opt'); el.classList.add('sel-'+l); };
+function renderVibes(){ document.getElementById('vibe-grid').innerHTML=VIBES.map(t=>`<div class="vibe-chip${selectedVibes.has(t)?' on':''}" onclick="toggleVibe(this,'${t}')">${t}</div>`).join(''); }
+window.toggleVibe = function(el,tag){ selectedVibes.has(tag)?(selectedVibes.delete(tag),el.classList.remove('on')):(selectedVibes.add(tag),el.classList.add('on')); };
+window.toggleAnon = function(){ anonMode=!anonMode; document.getElementById('anon-sw').classList.toggle('on',anonMode); };
+
+window.submitCI = async function() {
+  if (!currentUser) { toast('Sign in first!'); return; }
+  const btn = document.getElementById('ci-submit-btn');
+  btn.innerHTML = '<span class="loading-spinner"></span>Saving…';
+  btn.disabled = true;
+
+  const shopId = currentShopId || (shops[0]&&shops[0].id);
+  const shop = shopId && shops.find(x=>x.id===shopId);
+
+  try {
+    await addDoc(collection(db,'checkins'), {
+      userId: currentUser.uid,
+      userDisplayName: anonMode ? null : (currentUser.displayName || currentUser.email.split('@')[0]),
+      anonymous: anonMode,
+      shopId: shopId || 'unknown',
+      shopName: shop ? shop.name : 'Unknown',
+      shopAddr: shop ? shop.addr : '',
+      occ: selectedOcc,
+      tags: [...selectedVibes],
+      createdAt: serverTimestamp(),
+    });
+    document.getElementById('ci-overlay').classList.remove('open');
+    toast('Check-in saved! 🎉');
+    showFeed();
+  } catch(e) {
+    toast('Error saving — try again');
+  } finally {
+    btn.innerHTML = 'Submit check-in';
+    btn.disabled = false;
+  }
+};
+
+// ── Add shop ──
+window.openAdd = function() {
+  if (!currentUser) { showPanel('auth'); toast('Sign in to add a shop!'); return; }
+  document.getElementById('add-overlay').classList.add('open');
+};
+window.closeAdd = function(){ document.getElementById('add-overlay').classList.remove('open'); };
+window.closeAddOutside = function(e){ if(e.target===document.getElementById('add-overlay')) closeAdd(); };
+
+window.submitAdd = async function() {
+  const name = document.getElementById('add-name').value.trim();
+  const addr = document.getElementById('add-addr').value.trim();
+  const occ = document.getElementById('add-occ').value;
+  if(!name||!addr){ toast('Please fill in name and address'); return; }
+
+  geocoder.geocode({address:addr+', New York, NY'}, async (results,status) => {
+    if(status==='OK'){
+      const loc = results[0].geometry.location;
+      const id = 'user_'+Date.now();
+      const pct = occPct(occ);
+      const shop = {id,name,addr,lat:loc.lat(),lng:loc.lng(),occ,pct,reports:1,isUser:true};
+      userShops.push(shop); shops.push(shop);
+      dropMarker(shop);
+
+      // Save to Firestore
+      try {
+        await addDoc(collection(db,'user_shops'), {
+          name, addr, lat:loc.lat(), lng:loc.lng(),
+          addedBy: currentUser.uid,
+          createdAt: serverTimestamp(),
+        });
+      } catch(e){}
+
+      closeAdd();
+      toast(`${name} added to STOA! 📍`);
+      ['add-name','add-addr'].forEach(i=>document.getElementById(i).value='');
+      showShop(id);
+    } else { toast('Could not find that address'); }
+  });
+};
+
+// ── Auth ──
+window.toggleAuthMode = function() {
+  authMode = authMode==='signup'?'signin':'signup';
+  document.getElementById('auth-title').textContent = authMode==='signup'?'Join STOA':'Welcome back';
+  document.getElementById('auth-submit-btn').textContent = authMode==='signup'?'Create account':'Sign in';
+  document.getElementById('auth-name').style.display = authMode==='signup'?'block':'none';
+  document.getElementById('auth-toggle-link').innerHTML = authMode==='signup'?'Already have an account? <span>Sign in</span>':'New here? <span>Create account</span>';
+  document.getElementById('auth-error').style.display='none';
+};
+
+window.signInGoogle = async function() {
+  try {
+    await signInWithPopup(auth, googleProvider);
+    showFeed();
+    toast('Welcome to STOA! ☕');
+  } catch(e) { showAuthError(e.message); }
+};
+
+window.submitAuth = async function() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const name = document.getElementById('auth-name').value.trim();
+  if(!email||!pass){ showAuthError('Please fill in email and password'); return; }
+
+  const btn = document.getElementById('auth-submit-btn');
+  btn.textContent=''; btn.innerHTML='<span class="loading-spinner"></span>';
+  btn.disabled=true;
+
+  try {
+    if(authMode==='signup'){
+      if(!name){ showAuthError('Please enter a display name'); btn.textContent='Create account'; btn.disabled=false; return; }
+      const cred = await createUserWithEmailAndPassword(auth,email,pass);
+      await updateProfile(cred.user,{displayName:name});
+      showFeed();
+      toast('Welcome to STOA! ☕');
+    } else {
+      await signInWithEmailAndPassword(auth,email,pass);
+      showFeed();
+      toast('Welcome back! ☕');
+    }
+  } catch(e) {
+    const msg = e.code==='auth/email-already-in-use'?'That email is already registered':
+                e.code==='auth/wrong-password'?'Wrong password — try again':
+                e.code==='auth/user-not-found'?'No account found with that email':
+                e.code==='auth/weak-password'?'Password must be at least 6 characters':
+                e.message;
+    showAuthError(msg);
+  } finally {
+    btn.textContent = authMode==='signup'?'Create account':'Sign in';
+    btn.disabled=false;
+  }
+};
+
+function showAuthError(msg){ const el=document.getElementById('auth-error'); el.textContent=msg; el.style.display='block'; }
+
+window.signOutUser = async function() {
+  await signOut(auth);
+  showFeed();
+  toast('Signed out!');
+};
+
+// ── Helpers ──
+function showPanel(id){ document.querySelectorAll('.panel-view').forEach(v=>v.classList.remove('on')); document.getElementById('view-'+id).classList.add('on'); }
+function setActiveTab(id){ document.querySelectorAll('.tb-btn').forEach(b=>b.classList.remove('active')); if(id) document.getElementById(id)?.classList.add('active'); }
+function occColor(l){ return l==='empty'?'#5C7A5F':l==='moderate'?'#C8922A':'#B5511A'; }
+function occPct(l){ return l==='empty'?Math.floor(Math.random()*22+5):l==='moderate'?Math.floor(Math.random()*28+42):Math.floor(Math.random()*13+82); }
+function stringToColor(str){ let h=0; for(let i=0;i<str.length;i++){h=str.charCodeAt(i)+((h<<5)-h);} const colors=['#C8922A','#5C7A5F','#B5511A','#6A7FAA','#8A6AAA','#6A8A7A','#AA6A6A']; return colors[Math.abs(h)%colors.length]; }
+function timeAgo(date){ const s=Math.floor((new Date()-date)/1000); if(s<60) return 'just now'; if(s<3600) return Math.floor(s/60)+' min ago'; if(s<86400) return Math.floor(s/3600)+' hr ago'; return Math.floor(s/86400)+' days ago'; }
+window.toast = function(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); };
+
+// ── Boot ──
+const s = document.createElement('script');
+s.src = `https://maps.googleapis.com/maps/api/js?key=${GKEY}&libraries=places&callback=initMap`;
+s.async=true; s.defer=true;
+document.body.appendChild(s);
+showFeed();
+</script>
+</body>
+</html>
