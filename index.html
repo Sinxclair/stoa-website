@@ -30,6 +30,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .tb-btn.gold:hover{opacity:0.88;}
 .tb-btn.active{background:rgba(245,237,224,0.18);border-color:rgba(245,237,224,0.36);}
 
+/* FOUNDER TAG */
+.founder-tag{display:inline-block;background:var(--gold);color:white;font-size:9px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;padding:2px 7px;border-radius:10px;margin-left:6px;vertical-align:middle;}
+
 /* MAIN */
 .main{display:flex;flex:1;overflow:hidden;position:relative;}
 .map-wrap{flex:1;position:relative;overflow:hidden;}
@@ -183,7 +186,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     <div class="tb-actions">
       <button class="tb-btn active" id="tab-nearby" onclick="showNearby()">⊞ Near you</button>
       <button class="tb-btn" id="tab-feed" onclick="showFeed()">◎ Activity</button>
-      <button class="tb-btn" id="tab-checkin" onclick="openCI(null)">⊕ Check in</button>
       <button class="tb-btn" id="tab-profile" onclick="showMyProfile()">◉ Profile</button>
       <button class="tb-btn gold" onclick="openAdd()">+ Add shop</button>
     </div>
@@ -333,6 +335,12 @@ const googleProvider = new GoogleAuthProvider();
 // ── Globals ──
 const GKEY = 'AIzaSyBPKyW_DnJ3OXBu6OVOg_BcMjf9O1QUios';
 const VIBES = ['quiet','buzzy','good wifi','no wifi','outlets','natural light','cold brew','cozy','great music','standing desks','dog friendly','good espresso'];
+// Founders — usernames that get the founder tag
+const FOUNDER_USERNAMES = ['boo_sinx'];
+function isFounderName(name) {
+  if (!name) return false;
+  return FOUNDER_USERNAMES.includes(name.toLowerCase().trim());
+}
 let map, placesService, geocoder, autocomplete;
 let markers = [];
 let shops = [];
@@ -587,16 +595,53 @@ function renderFeedItems(items) {
     const timeStr = item.createdAt ? timeAgo(item.createdAt.toDate()) : 'just now';
     const tags = item.tags || [];
     const isMe = currentUser && item.userId === currentUser.uid;
+    const showFounder = !isAnon && isFounderName(displayName);
     return `<div class="feed-item">
       <div class="av" style="background:${color};" onclick="${!isAnon&&!isMe?`showUserProfile('${item.userId}','${displayName}')`:''}">${initials}</div>
       <div class="feed-body">
-        <span class="feed-user" onclick="${!isAnon&&!isMe?`showUserProfile('${item.userId}','${displayName}')`:''}">${isMe?'you':displayName}</span>
+        <span class="feed-user" onclick="${!isAnon&&!isMe?`showUserProfile('${item.userId}','${displayName}')`:''}">${isMe?'you':displayName}</span>${showFounder?'<span class="founder-tag">Founder</span>':''}
         <span> checked in at <span class="feed-shop" onclick="showShop('${shopId}')">${shopName}</span> as <span style="color:${occC};font-weight:500;">${item.occ}</span></span>
         ${tags.length?`<div class="feed-tags-row">${tags.map(t=>`<span class="ftag">${t}</span>`).join('')}</div>`:''}
         <div class="feed-time">${timeStr}</div>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Reliable open-now check using period data directly ──
+// The native isOpen() method has known bugs; this checks periods manually.
+// Returns: true = open, false = closed, null = unknown/24-hour/missing data
+function isShopOpenNow(openingHours) {
+  if (!openingHours || !openingHours.periods || !openingHours.periods.length) {
+    return null; // no data — treat as unknown (don't block check-ins)
+  }
+  const now = new Date();
+  const today = now.getDay(); // 0=Sunday, 1=Monday...
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  // If a period has open but no close, it means 24 hours
+  for (const period of openingHours.periods) {
+    if (period.open && !period.close) return true;
+  }
+
+  // Check each period — a period might span midnight (close.day > open.day or next day)
+  for (const period of openingHours.periods) {
+    if (!period.open || !period.close) continue;
+    const openDay = period.open.day;
+    const closeDay = period.close.day;
+    const openMin = period.open.hours * 60 + period.open.minutes;
+    const closeMin = period.close.hours * 60 + period.close.minutes;
+
+    // Same-day period (e.g. Mon 7am - Mon 6pm)
+    if (openDay === closeDay) {
+      if (today === openDay && nowMinutes >= openMin && nowMinutes < closeMin) return true;
+    } else {
+      // Period spans midnight (e.g. Fri 10pm - Sat 2am)
+      if (today === openDay && nowMinutes >= openMin) return true;
+      if (today === closeDay && nowMinutes < closeMin) return true;
+    }
+  }
+  return false;
 }
 
 // ── Show shop ──
@@ -645,38 +690,30 @@ window.showShop = function(id) {
     fields: ['reviews','photos','opening_hours','formatted_phone_number','website']
   }, (place, status) => {
     let reviewsHTML = '';
-    let isShopOpen = true; // default to open
 
     if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-      // Only show open/closed if Google has confirmed hours data
-      if (place.opening_hours && place.opening_hours.periods && place.opening_hours.periods.length > 0) {
-        try {
-          isShopOpen = place.opening_hours.isOpen();
-          const statusEl = document.getElementById('shop-open-status');
-          if (statusEl) {
-            statusEl.innerHTML = `<div style="padding:8px 18px 0;font-size:12px;font-weight:500;color:${isShopOpen?'#5C7A5F':'#B5511A'};">
-              ${isShopOpen ? '● Open now' : '● Closed right now'}
-            </div>`;
-          }
-          // Only disable check-in if explicitly closed
-          if (isShopOpen === false) {
-            const btn = document.getElementById('shop-checkin-btn');
-            if (btn) {
-              btn.style.background = '#C0B4A8';
-              btn.style.cursor = 'not-allowed';
-              btn.textContent = 'Closed right now';
-              btn.onclick = null;
-              s.isClosed = true;
-              renderNearbyList();
-            }
-          }
-        } catch(e) {
-          // Can't determine hours — don't show anything, assume open
-        }
-      }
-      // If no confirmed hours data, leave status blank and keep check-in enabled
+      // Reliable open/closed check using periods directly
+      const openState = isShopOpenNow(place.opening_hours);
+      s.isClosed = openState === false; // only true when we're confident it's closed
 
-      // Photos strip — inject into dedicated slot above button
+      const statusEl = document.getElementById('shop-open-status');
+      if (statusEl && openState !== null) {
+        statusEl.innerHTML = `<div style="padding:8px 18px 0;font-size:12px;font-weight:500;color:${openState?'#5C7A5F':'#B5511A'};">
+          ${openState ? '● Open now' : '● Closed right now'}
+        </div>`;
+      }
+      if (openState === false) {
+        const btn = document.getElementById('shop-checkin-btn');
+        if (btn) {
+          btn.style.background = '#C0B4A8';
+          btn.style.cursor = 'not-allowed';
+          btn.textContent = 'Closed right now';
+          btn.onclick = null;
+        }
+        renderNearbyList();
+      }
+
+      // Photos strip
       if (place.photos && place.photos.length) {
         const photoUrls = place.photos.slice(0,6).map(p => p.getUrl({maxWidth:320,maxHeight:220}));
         const photosEl = document.getElementById('shop-photos');
@@ -733,10 +770,11 @@ window.showShop = function(id) {
           const occC = occColor(item.occ);
           const tags = item.tags||[];
           const timeStr = item.createdAt ? timeAgo(item.createdAt.toDate()) : 'just now';
+          const showFounder = !isAnon && isFounderName(dName);
           return `<div class="feed-item">
             <div class="av" style="background:${avColor};">${initials}</div>
             <div class="feed-body">
-              <span class="feed-user">${dName}</span>
+              <span class="feed-user">${dName}</span>${showFounder?'<span class="founder-tag">Founder</span>':''}
               <span> · <span style="color:${occC};font-weight:500;">${item.occ}</span></span>
               ${tags.length?`<div class="feed-tags-row">${tags.map(t=>`<span class="ftag">${t}</span>`).join('')}</div>`:''}
               <div class="feed-time">${timeStr}</div>
@@ -801,6 +839,7 @@ window.showUserProfile = async function(uid, name) {
 async function renderProfile(uid, name, isMe) {
   const initials = name.slice(0,2).toUpperCase();
   const color = stringToColor(uid);
+  const showFounder = isFounderName(name);
   // Fetch user data for points/badges
   let userData = {};
   try {
@@ -818,7 +857,7 @@ async function renderProfile(uid, name, isMe) {
     <div class="profile-hero">
       <div class="back-link" onclick="showNearby()">← Back</div>
       <div class="profile-av" style="background:${color};">${initials}</div>
-      <div class="profile-name">${name}</div>
+      <div class="profile-name">${name}${showFounder?'<span class="founder-tag">Founder</span>':''}</div>
       <div class="profile-handle">@${isMe?(currentUser.displayName||currentUser.email.split('@')[0]).toLowerCase().replace(/\s/g,'_'):name.toLowerCase().replace(/\s/g,'_')}</div>
       ${isMe?`<button onclick="signOutUser()" style="margin-top:8px;background:transparent;border:0.5px solid rgba(28,15,6,0.15);border-radius:20px;padding:5px 14px;font-size:11px;cursor:pointer;color:#8A7A6A;">Sign out</button>`:''}
       <div class="profile-stats">
@@ -857,7 +896,6 @@ async function renderProfile(uid, name, isMe) {
     const q = query(collection(db,'checkins'), where('userId','==',uid), limit(50));
     const snap = await getDocs(q);
     const items = snap.docs.map(d=>({id:d.id,...d.data()}));
-    document.getElementById('p-count').textContent = items.length;
     document.getElementById('profile-body').innerHTML =
       `<div class="sec-label">Check-in history</div>` +
       (items.length ? items.map(item=>{
