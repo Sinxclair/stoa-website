@@ -642,32 +642,33 @@ window.showShop = function(id) {
     let isShopOpen = true; // default to open
 
     if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-      // Check if open and update the status + button
-      if (place.opening_hours) {
+      // Only show open/closed if Google has confirmed hours data
+      if (place.opening_hours && place.opening_hours.periods && place.opening_hours.periods.length > 0) {
         try {
           isShopOpen = place.opening_hours.isOpen();
-        } catch(e) {
-          isShopOpen = true; // if we can't determine, assume open
-        }
-        const statusEl = document.getElementById('shop-open-status');
-        if (statusEl && isShopOpen !== null) {
-          statusEl.innerHTML = `<div style="padding:8px 18px 0;font-size:12px;font-weight:500;color:${isShopOpen?'#5C7A5F':'#B5511A'};">
-            ${isShopOpen ? '● Open now' : '● Closed right now'}
-          </div>`;
-        }
-        // Only disable if explicitly closed
-        if (isShopOpen === false) {
-          const btn = document.getElementById('shop-checkin-btn');
-          if (btn) {
-            btn.style.background = '#C0B4A8';
-            btn.style.cursor = 'not-allowed';
-            btn.textContent = 'Closed right now';
-            btn.onclick = null;
-            s.isClosed = true;
-            renderNearbyList(); // refresh list to grey it out
+          const statusEl = document.getElementById('shop-open-status');
+          if (statusEl) {
+            statusEl.innerHTML = `<div style="padding:8px 18px 0;font-size:12px;font-weight:500;color:${isShopOpen?'#5C7A5F':'#B5511A'};">
+              ${isShopOpen ? '● Open now' : '● Closed right now'}
+            </div>`;
           }
+          // Only disable check-in if explicitly closed
+          if (isShopOpen === false) {
+            const btn = document.getElementById('shop-checkin-btn');
+            if (btn) {
+              btn.style.background = '#C0B4A8';
+              btn.style.cursor = 'not-allowed';
+              btn.textContent = 'Closed right now';
+              btn.onclick = null;
+              s.isClosed = true;
+              renderNearbyList();
+            }
+          }
+        } catch(e) {
+          // Can't determine hours — don't show anything, assume open
         }
       }
+      // If no confirmed hours data, leave status blank and keep check-in enabled
 
       // Photos strip — inject into dedicated slot above button
       if (place.photos && place.photos.length) {
