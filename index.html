@@ -1091,6 +1091,14 @@ window.signOutUser = async function() {
 };
 
 // ── Helpers ──
+function toggleDropdown(id) {
+  const body = document.getElementById(id);
+  const arrow = document.getElementById('arr-'+id);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.classList.toggle('open', !isOpen);
+}
 function showPanel(id){ 
   document.querySelectorAll('.panel-view').forEach(v=>{
     v.classList.remove('on');
