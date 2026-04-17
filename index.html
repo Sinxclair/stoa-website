@@ -180,7 +180,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
       <input class="search-input" id="search-input" type="text" placeholder="Search — Bushwick, Williamsburg…">
     </div>
     <div class="tb-actions">
-      <button class="tb-btn active" id="tab-nearby" onclick="showNearby()">⊞ Nearby</button>
+      <button class="tb-btn active" id="tab-nearby" onclick="showNearby()">⊞ Near you</button>
       <button class="tb-btn" id="tab-feed" onclick="showFeed()">◎ Activity</button>
       <button class="tb-btn" id="tab-checkin" onclick="openCI(null)">⊕ Check in</button>
       <button class="tb-btn" id="tab-profile" onclick="showMyProfile()">◉ Profile</button>
@@ -202,7 +202,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
     <div class="panel" id="panel">
       <!-- NEARBY VIEW (default) -->
-      <div class="panel-view on" id="view-nearby">
+      <div class="panel-view on" id="view-nearby" style="display:flex;">
         <div class="feed-hdr">
           <div class="feed-hdr-title">Nearby spots</div>
           <div style="font-size:11px;color:#8A7A6A;margin-top:3px;">Tap a shop to see details or check in</div>
@@ -213,7 +213,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
       </div>
 
       <!-- FEED VIEW -->
-      <div class="panel-view" id="view-feed">
+      <div class="panel-view" id="view-feed" style="display:none;">
         <div class="feed-hdr">
           <div class="feed-hdr-title">Activity</div>
           <div style="font-size:11px;color:#8A7A6A;margin-top:3px;">Real-time check-ins near you</div>
@@ -428,57 +428,79 @@ window.initMap = function() {
 };
 
 function searchNearby(center) {
-  placesService.nearbySearch({location:center, radius:1400, type:'cafe', keyword:'coffee'}, (results, status) => {
+  placesService.nearbySearch({
+    location: center,
+    radius: 2000,
+    type: 'cafe',
+    keyword: 'coffee',
+    openNow: true
+  }, (results, status) => {
     if (status !== google.maps.places.PlacesServiceStatus.OK || !results) return;
     clearMarkers();
-    // Filter out permanently closed places
-    const open = results.filter(p => p.business_status !== 'CLOSED_PERMANENTLY' && p.business_status !== 'CLOSED_TEMPORARILY');
-    shops = open.map(p => ({
-      id: p.place_id,
-      name: p.name,
-      addr: p.vicinity,
-      lat: p.geometry.location.lat(),
-      lng: p.geometry.location.lng(),
-      occ: 'moderate',
-      pct: 50,
-      reports: 0,
-      isUser: false,
-    }));
+    // Only open places
+    const open = results.filter(p =>
+      p.business_status === 'OPERATIONAL' ||
+      p.business_status === undefined
+    );
+    shops = open.map(p => {
+      // Use Google's user_ratings_total as a proxy for busyness
+      // High ratings count = popular = likely busier
+      const ratingCount = p.user_ratings_total || 0;
+      let defaultOcc = 'empty';
+      if (ratingCount > 500) defaultOcc = 'full';
+      else if (ratingCount > 100) defaultOcc = 'moderate';
+      return {
+        id: p.place_id,
+        name: p.name,
+        addr: p.vicinity,
+        lat: p.geometry.location.lat(),
+        lng: p.geometry.location.lng(),
+        occ: defaultOcc,
+        pct: defaultOcc==='empty'?15:defaultOcc==='moderate'?50:80,
+        reports: 0,
+        rating: p.rating || null,
+        ratingCount,
+        isUser: false,
+        googleDefault: true, // flag so we know this is google's estimate
+      };
+    });
     userShops.forEach(us => { if (!shops.find(s=>s.id===us.id)) shops.push(us); });
     shops.forEach(s => dropMarker(s));
-    loadOccupancyFromFirestore();
+    loadOccupancyFromFirestore(); // this will override with real user data
     renderNearbyList();
     listenFeed();
   });
 }
 
-// ── Load real occupancy from Firestore ──
+// ── Load real occupancy from Firestore (no composite index needed) ──
 async function loadOccupancyFromFirestore() {
-  const shopIds = shops.map(s => s.id);
-  // For each shop, get the most recent check-in within last hour
-  for (const shop of shops) {
-    try {
-      const q = query(
-        collection(db, 'checkins'),
-        where('shopId', '==', shop.id),
-        orderBy('createdAt', 'desc'),
-        limit(1)
-      );
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        const data = snap.docs[0].data();
-        shop.occ = data.occ;
-        shop.pct = occPct(data.occ);
-        shop.reports++;
-        updateMarkerColor(shop);
+  try {
+    // Pull all recent checkins in one query - no orderBy+where combo needed
+    const snap = await getDocs(query(collection(db,'checkins'), limit(200)));
+    const byShop = {};
+    snap.docs.forEach(d => {
+      const data = d.data();
+      if (!byShop[data.shopId]) byShop[data.shopId] = [];
+      byShop[data.shopId].push(data);
+    });
+    shops.forEach(shop => {
+      const shopCheckins = byShop[shop.id];
+      if (shopCheckins && shopCheckins.length) {
+        // Sort by createdAt descending to get latest
+        shopCheckins.sort((a,b) => {
+          const ta = a.createdAt?.toMillis?.() || 0;
+          const tb = b.createdAt?.toMillis?.() || 0;
+          return tb - ta;
+        });
+        shop.occ = shopCheckins[0].occ;
+        shop.pct = occPct(shop.occ);
+        shop.reports = shopCheckins.length;
       }
-    } catch(e) {}
-  }
-}
-
-function updateMarkerColor(shop) {
-  clearMarkers();
-  shops.forEach(s => dropMarker(s));
+    });
+    clearMarkers();
+    shops.forEach(s => dropMarker(s));
+    renderNearbyList();
+  } catch(e) { console.log('occ load error', e); }
 }
 
 function clearMarkers() { markers.forEach(m=>m.setMap(null)); markers=[]; }
@@ -508,14 +530,21 @@ function dropMarker(shop) {
   markers.push(marker);
 }
 
-// ── Live feed from Firestore ──
+// ── Live feed from Firestore (simple query, no composite index) ──
 function listenFeed() {
   if (feedUnsub) feedUnsub();
-  const q = query(collection(db, 'checkins'), orderBy('createdAt','desc'), limit(40));
+  const q = query(collection(db, 'checkins'), limit(60));
   feedUnsub = onSnapshot(q, snap => {
-    const items = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    let items = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    // Sort client-side to avoid needing index
+    items.sort((a,b) => {
+      const ta = a.createdAt?.toMillis?.() || 0;
+      const tb = b.createdAt?.toMillis?.() || 0;
+      return tb - ta;
+    });
+    items = items.slice(0,40);
     renderFeedItems(items);
-    // Update shop occupancy from latest check-ins
+    // Update shop occupancy
     const seen = new Set();
     items.forEach(item => {
       if (!seen.has(item.shopId)) {
@@ -529,6 +558,7 @@ function listenFeed() {
     });
     clearMarkers();
     shops.forEach(s=>dropMarker(s));
+    renderNearbyList();
   });
 }
 
@@ -587,10 +617,16 @@ window.showShop = function(id) {
     <button class="checkin-now-btn" onclick="openCI('${id}')">Check in here</button>
   `;
 
-  // Live check-ins for this shop
-  const q = query(collection(db,'checkins'), where('shopId','==',id), orderBy('createdAt','desc'), limit(10));
+  // Live check-ins for this shop (client-side sort to avoid index)
+  const q = query(collection(db,'checkins'), where('shopId','==',id), limit(20));
   onSnapshot(q, snap => {
-    const items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    let items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    items.sort((a,b)=>{
+      const ta=a.createdAt?.toMillis?.()|| 0;
+      const tb=b.createdAt?.toMillis?.()|| 0;
+      return tb-ta;
+    });
+    items = items.slice(0,10);
     const body = document.getElementById('shop-body');
     if (!body) return;
     body.innerHTML = `<div class="sec-label">Recent activity</div>` +
@@ -628,7 +664,7 @@ function renderNearbyList() {
       <div class="nearby-info">
         <div class="nearby-name">${s.name}</div>
         <div class="nearby-addr">${s.addr}</div>
-        ${s.reports>0?`<div class="nearby-reports">${s.reports} report${s.reports!==1?'s':''} today</div>`:'<div class="nearby-reports">No reports yet</div>'}
+        ${s.reports>0?`<div class="nearby-reports">${s.reports} user report${s.reports!==1?'s':''}</div>`:`<div class="nearby-reports" style="font-style:italic;">Est. from Google data</div>`}
       </div>
       <div class="nearby-right">
         <div class="nearby-pill" style="background:${color}1a;color:${color};">${cap}</div>
@@ -684,7 +720,7 @@ async function renderProfile(uid, name, isMe) {
 
   // Fetch check-in history
   try {
-    const q = query(collection(db,'checkins'), where('userId','==',uid), orderBy('createdAt','desc'), limit(20));
+    const q = query(collection(db,'checkins'), where('userId','==',uid), limit(50));
     const snap = await getDocs(q);
     const items = snap.docs.map(d=>({id:d.id,...d.data()}));
     document.getElementById('p-count').textContent = items.length;
