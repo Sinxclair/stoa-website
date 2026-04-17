@@ -92,13 +92,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .nearby-checkin-btn{font-size:10px;font-weight:500;color:var(--gold);cursor:pointer;padding:2px 0;}
 .nearby-checkin-btn:hover{text-decoration:underline;}
 .review-item{padding:12px 18px;border-bottom:1px solid rgba(28,15,6,0.05);}
-.dropdown-section{border-bottom:1px solid rgba(28,15,6,0.08);}
-.dropdown-header{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;cursor:pointer;font-size:11px;font-weight:500;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;user-select:none;}
-.dropdown-header:hover{background:rgba(28,15,6,0.02);}
-.dropdown-arrow{font-size:10px;transition:transform 0.2s;color:#A09080;}
-.dropdown-arrow.open{transform:rotate(180deg);}
-.dropdown-body{overflow:hidden;}
-.premium-badge{font-size:9px;background:#FDF4E3;color:var(--gold);border-radius:10px;padding:2px 7px;margin-left:6px;border:0.5px solid var(--gold);}
 
 /* PROFILE */
 .profile-hero{padding:18px 18px 14px;text-align:center;background:white;border-bottom:1px solid rgba(28,15,6,0.06);}
@@ -318,9 +311,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
 <!-- FIREBASE -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, doc, setDoc, getDoc, serverTimestamp, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, doc, setDoc, getDoc, serverTimestamp, where, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBaKe75EL614ivSw4I-FO-Hf08rqknbn-g",
@@ -465,12 +458,13 @@ function searchNearby(center) {
         lat: p.geometry.location.lat(),
         lng: p.geometry.location.lng(),
         occ: defaultOcc,
+        googleOcc: defaultOcc, // store google estimate separately
         pct: defaultOcc==='empty'?15:defaultOcc==='moderate'?50:80,
         reports: 0,
         rating: p.rating || null,
         ratingCount,
         isUser: false,
-        googleDefault: true, // flag so we know this is google's estimate
+        googleDefault: true,
       };
     });
     userShops.forEach(us => { if (!shops.find(s=>s.id===us.id)) shops.push(us); });
@@ -553,16 +547,21 @@ function listenFeed() {
     });
     items = items.slice(0,40);
     renderFeedItems(items);
-    // Update shop occupancy
-    const seen = new Set();
+    // Update shop occupancy using algorithm
+    const byShop = {};
     items.forEach(item => {
-      if (!seen.has(item.shopId)) {
-        seen.add(item.shopId);
-        const shop = shops.find(s=>s.id===item.shopId);
-        if (shop) {
-          shop.occ = item.occ;
-          shop.pct = occPct(item.occ);
-        }
+      if (!byShop[item.shopId]) byShop[item.shopId] = [];
+      byShop[item.shopId].push(item);
+    });
+    shops.forEach(shop => {
+      const shopCheckins = byShop[shop.id] || [];
+      if (shopCheckins.length) {
+        const result = computeOccupancy(shopCheckins, shop.googleOcc || shop.occ);
+        shop.occ = result.occ;
+        shop.pct = occPct(result.occ);
+        shop.occSource = result.source;
+        shop.occCount = result.count;
+        shop.googleDefault = result.source === 'google';
       }
     });
     clearMarkers();
@@ -620,7 +619,6 @@ window.showShop = function(id) {
       <div class="shop-name">☕ ${s.name}</div>
       <div class="shop-addr">${s.addr}</div>
       ${s.rating ? `<div style="font-size:12px;color:#8A7A6A;margin-top:4px;">★ ${s.rating} · ${s.ratingCount?.toLocaleString()||0} Google reviews</div>` : ''}
-      <div style="font-size:12px;color:#8A7A6A;margin-top:3px;">${s.reports} check-in${s.reports!==1?'s':''} total</div>
     </div>
     <div class="occ-block">
       <div class="occ-meta">
@@ -651,7 +649,7 @@ window.showShop = function(id) {
 
     if (status === google.maps.places.PlacesServiceStatus.OK && place) {
       // Only show open/closed if Google has confirmed hours data
-      if (false) {
+      if (place.opening_hours && place.opening_hours.periods && place.opening_hours.periods.length > 0) {
         try {
           isShopOpen = place.opening_hours.isOpen();
           const statusEl = document.getElementById('shop-open-status');
@@ -709,64 +707,9 @@ window.showShop = function(id) {
         reviewsHTML = '<div style="padding:12px 18px;font-size:12px;color:#A09080;">No Google reviews available.</div>';
       }
 
-      body.innerHTML = `
-        <div class="dropdown-section">
-          <div class="dropdown-header" onclick="toggleDropdown('dd-premium')">
-            <span>⚙ Shop details <span class="premium-badge">👑 Premium</span></span>
-            <span class="dropdown-arrow open" id="arr-dd-premium">▼</span>
-          </div>
-          <div class="dropdown-body" id="dd-premium">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 18px 14px;">
-              <div style="background:white;border-radius:10px;padding:10px;border:0.5px solid rgba(28,15,6,0.08);">
-                <div style="font-size:13px;font-weight:500;color:#B0A090;">Coming soon</div>
-                <div style="font-size:10px;color:#A09080;margin-top:2px;">Mbps wifi</div>
-              </div>
-              <div style="background:white;border-radius:10px;padding:10px;border:0.5px solid rgba(28,15,6,0.08);">
-                <div style="font-size:13px;font-weight:500;color:#B0A090;">Coming soon</div>
-                <div style="font-size:10px;color:#A09080;margin-top:2px;">Outlets</div>
-              </div>
-              <div style="background:white;border-radius:10px;padding:10px;border:0.5px solid rgba(28,15,6,0.08);">
-                <div style="font-size:13px;font-weight:500;color:#B0A090;">Coming soon</div>
-                <div style="font-size:10px;color:#A09080;margin-top:2px;">Noise level</div>
-              </div>
-              <div style="background:white;border-radius:10px;padding:10px;border:0.5px solid rgba(28,15,6,0.08);">
-                <div style="font-size:13px;font-weight:500;color:#B0A090;">Coming soon</div>
-                <div style="font-size:10px;color:#A09080;margin-top:2px;">Laptop hours</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="dropdown-section">
-          <div class="dropdown-header" onclick="toggleDropdown('dd-activity')">
-            <span>Recent activity</span>
-            <span class="dropdown-arrow open" id="arr-dd-activity">▼</span>
-          </div>
-          <div class="dropdown-body" id="dd-activity">
-            <div id="recent-activity-section"><div style="padding:14px 18px;font-size:12px;color:#A09080;font-style:italic;">No recent activity yet — be the first to check in!</div></div>
-          </div>
-        </div>
-        <div class="dropdown-section">
-          <div class="dropdown-header" onclick="toggleDropdown('dd-reviews')">
-            <span>Google reviews</span>
-            <span class="dropdown-arrow" id="arr-dd-reviews">▼</span>
-          </div>
-          <div class="dropdown-body" id="dd-reviews" style="display:none;">
-            ${reviewsHTML}
-          </div>
-        </div>
-      `;
+      body.innerHTML = reviewsHTML + `<div id="recent-activity-section"></div>`;
     } else {
-      body.innerHTML = `
-        <div class="dropdown-section">
-          <div class="dropdown-header" onclick="toggleDropdown('dd-activity')">
-            <span>Recent activity</span>
-            <span class="dropdown-arrow open" id="arr-dd-activity">▼</span>
-          </div>
-          <div class="dropdown-body" id="dd-activity">
-            <div id="recent-activity-section"></div>
-          </div>
-        </div>
-      `;
+      body.innerHTML = `<div id="recent-activity-section"></div>`;
     }
 
     // Live STOA check-ins for this shop
@@ -858,18 +801,55 @@ window.showUserProfile = async function(uid, name) {
 async function renderProfile(uid, name, isMe) {
   const initials = name.slice(0,2).toUpperCase();
   const color = stringToColor(uid);
+  // Fetch user data for points/badges
+  let userData = {};
+  try {
+    const uSnap = await getDoc(doc(db,'users',uid));
+    if (uSnap.exists()) userData = uSnap.data();
+  } catch(e) {}
+  
+  const points = userData.points || 0;
+  const badges = userData.badges || [];
+  const totalCheckins = userData.totalCheckins || 0;
+  const rewardThreshold = 20;
+  const progressPct = Math.min((points/rewardThreshold)*100, 100);
+
   document.getElementById('profile-hdr-area').innerHTML = `
     <div class="profile-hero">
-      <div class="back-link" onclick="showFeed()">← Back</div>
+      <div class="back-link" onclick="showNearby()">← Back</div>
       <div class="profile-av" style="background:${color};">${initials}</div>
       <div class="profile-name">${name}</div>
-      <div class="profile-handle">${isMe?currentUser.email:('@'+name.toLowerCase().replace(/\s/g,'_'))}</div>
-      ${isMe?`<button onclick="signOutUser()" style="margin-top:10px;background:transparent;border:0.5px solid rgba(28,15,6,0.15);border-radius:20px;padding:5px 14px;font-size:11px;cursor:pointer;color:#8A7A6A;">Sign out</button>`:''}
+      <div class="profile-handle">@${isMe?(currentUser.displayName||currentUser.email.split('@')[0]).toLowerCase().replace(/\s/g,'_'):name.toLowerCase().replace(/\s/g,'_')}</div>
+      ${isMe?`<button onclick="signOutUser()" style="margin-top:8px;background:transparent;border:0.5px solid rgba(28,15,6,0.15);border-radius:20px;padding:5px 14px;font-size:11px;cursor:pointer;color:#8A7A6A;">Sign out</button>`:''}
       <div class="profile-stats">
-        <div class="p-stat"><div class="p-val" id="p-count">—</div><div class="p-key">check-ins</div></div>
-        <div class="p-stat"><div class="p-val">public</div><div class="p-key">profile</div></div>
+        <div class="p-stat"><div class="p-val">${totalCheckins}</div><div class="p-key">check-ins</div></div>
+        <div class="p-stat"><div class="p-val">${points}</div><div class="p-key">points</div></div>
+        <div class="p-stat"><div class="p-val">${badges.length}</div><div class="p-key">badges</div></div>
       </div>
     </div>
+    ${points > 0 ? `
+    <div style="padding:12px 18px;background:white;border-bottom:1px solid rgba(28,15,6,0.06);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:11px;font-weight:500;color:var(--gold);text-transform:uppercase;letter-spacing:0.07em;">Rewards progress</div>
+        <div style="font-size:11px;color:#8A7A6A;">${points}/${rewardThreshold} pts</div>
+      </div>
+      <div style="height:6px;background:rgba(28,15,6,0.08);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${progressPct}%;background:var(--gold);border-radius:3px;transition:width 0.5s;"></div>
+      </div>
+      <div style="font-size:11px;color:#8A7A6A;margin-top:5px;">${points >= rewardThreshold ? '🎉 Redeem your free coffee at a partner shop!' : `${rewardThreshold-points} more points for a free coffee ☕`}</div>
+    </div>` : ''}
+    ${badges.length ? `
+    <div style="padding:12px 18px;border-bottom:1px solid rgba(28,15,6,0.06);">
+      <div style="font-size:10px;font-weight:500;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Badges</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${BADGES.filter(b=>badges.includes(b.id)).map(b=>`
+          <div style="display:flex;align-items:center;gap:5px;background:var(--warm);border-radius:20px;padding:4px 10px;">
+            <span style="font-size:14px;">${b.icon}</span>
+            <span style="font-size:11px;font-weight:500;color:var(--esp);">${b.name}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
   `;
 
   // Fetch check-in history
@@ -906,6 +886,21 @@ window.openCI = function(shopId) {
   const s = shopId ? shops.find(x=>x.id===shopId) : null;
   document.getElementById('ci-title').textContent = s ? `Check in at ${s.name}` : 'Check in';
   document.getElementById('ci-sub').textContent = s ? s.addr : 'Report what you see right now';
+  // Check location and warn if far
+  if (s) {
+    checkUserLocation(s).then(loc => {
+      const subEl = document.getElementById('ci-sub');
+      if (!subEl) return;
+      if (loc.verified) {
+        subEl.textContent = s.addr + ' · ✓ You are here';
+        subEl.style.color = '#5C7A5F';
+      } else if (loc.distance !== null) {
+        subEl.innerHTML = s.addr + `<br><span style="color:#C8922A;font-size:11px;">⚠ ${loc.distance}m away — unverified check-in (can't report Full)</span>`;
+      } else {
+        subEl.innerHTML = s.addr + `<br><span style="color:#A09080;font-size:11px;">Location unavailable — unverified check-in</span>`;
+      }
+    });
+  }
   selectedOcc='moderate'; anonMode=false; selectedVibes.clear();
   document.getElementById('anon-sw').classList.remove('on');
   document.querySelectorAll('.occ-opt').forEach(o=>o.className='occ-opt');
@@ -919,6 +914,155 @@ window.selOcc = function(l,el){ selectedOcc=l; document.querySelectorAll('.occ-o
 function renderVibes(){ document.getElementById('vibe-grid').innerHTML=VIBES.map(t=>`<div class="vibe-chip${selectedVibes.has(t)?' on':''}" onclick="toggleVibe(this,'${t}')">${t}</div>`).join(''); }
 window.toggleVibe = function(el,tag){ selectedVibes.has(tag)?(selectedVibes.delete(tag),el.classList.remove('on')):(selectedVibes.add(tag),el.classList.add('on')); };
 window.toggleAnon = function(){ anonMode=!anonMode; document.getElementById('anon-sw').classList.toggle('on',anonMode); };
+
+// ── Geofencing ──
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+async function checkUserLocation(shop) {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve({verified:false,distance:null}); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const dist = getDistanceMeters(pos.coords.latitude, pos.coords.longitude, shop.lat, shop.lng);
+        resolve({verified: dist <= 200, distance: Math.round(dist)});
+      },
+      () => resolve({verified:false, distance:null}),
+      {timeout:5000}
+    );
+  });
+}
+
+// ── Points & Badges ──
+const BADGES = [
+  {id:'regular', icon:'☕', name:'Regular', desc:'10 total check-ins', check: s => s.totalCheckins >= 10},
+  {id:'explorer', icon:'🗺️', name:'Explorer', desc:'Checked in at 10 different shops', check: s => s.uniqueShops >= 10},
+  {id:'trusted', icon:'👑', name:'Trusted', desc:'50+ check-ins', check: s => s.totalCheckins >= 50},
+  {id:'earlybird', icon:'🌅', name:'Early Bird', desc:'Check in before 9am', check: s => s.earlyBird},
+  {id:'nightowl', icon:'🌙', name:'Night Owl', desc:'Check in after 8pm', check: s => s.nightOwl},
+  {id:'local', icon:'🏆', name:'Local', desc:'5+ check-ins at same shop', check: s => s.maxSameShop >= 5},
+];
+
+async function awardPoints(userId, shopId, checkinTime) {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.exists() ? userSnap.data() : {};
+    
+    const today = new Date().toDateString();
+    const todayPoints = userData.todayPoints || 0;
+    const todayDate = userData.todayDate || '';
+    const shopsToday = userData.shopsToday || [];
+    
+    // Reset daily if new day
+    const currentTodayPoints = todayDate === today ? todayPoints : 0;
+    const currentShopsToday = todayDate === today ? shopsToday : [];
+    
+    // Check if can earn points
+    const canEarn = currentTodayPoints < 5 && !currentShopsToday.includes(shopId);
+    
+    if (canEarn) {
+      const newPoints = (userData.points || 0) + 1;
+      const newTodayPoints = currentTodayPoints + 1;
+      const newShopsToday = [...currentShopsToday, shopId];
+      const totalCheckins = (userData.totalCheckins || 0) + 1;
+      const uniqueShops = new Set([...(userData.uniqueShopIds || []), shopId]).size;
+      const hour = new Date(checkinTime).getHours();
+      const earlyBird = userData.earlyBird || hour < 9;
+      const nightOwl = userData.nightOwl || hour >= 20;
+      
+      // Track same-shop count
+      const shopCounts = userData.shopCounts || {};
+      shopCounts[shopId] = (shopCounts[shopId] || 0) + 1;
+      const maxSameShop = Math.max(...Object.values(shopCounts));
+      
+      // Check badges
+      const stats = {totalCheckins, uniqueShops, earlyBird, nightOwl, maxSameShop};
+      const earnedBadges = BADGES.filter(b => b.check(stats)).map(b => b.id);
+      const prevBadges = userData.badges || [];
+      const newBadges = earnedBadges.filter(b => !prevBadges.includes(b));
+      
+      await setDoc(userRef, {
+        points: newPoints,
+        todayPoints: newTodayPoints,
+        todayDate: today,
+        shopsToday: newShopsToday,
+        totalCheckins,
+        uniqueShopIds: [...(userData.uniqueShopIds || []), shopId],
+        shopCounts,
+        uniqueShops,
+        earlyBird,
+        nightOwl,
+        maxSameShop,
+        badges: earnedBadges,
+      }, {merge: true});
+      
+      if (newBadges.length) {
+        const badge = BADGES.find(b => b.id === newBadges[0]);
+        setTimeout(() => toast(`${badge.icon} Badge unlocked: ${badge.name}!`), 1000);
+      }
+      return {pointsEarned: 1, totalPoints: newPoints, newBadges};
+    }
+    return {pointsEarned: 0, totalPoints: userData.points || 0, newBadges: []};
+  } catch(e) { console.log('points error', e); return {pointsEarned:0}; }
+}
+
+// ── Occupancy algorithm ──
+function computeOccupancy(checkins, googleOcc) {
+  const now = Date.now();
+  const validMs = 45 * 60 * 1000; // 45 mins
+  const twoHours = 2 * 60 * 60 * 1000;
+  
+  const valid = checkins.filter(c => {
+    const t = c.createdAt?.toMillis?.() || 0;
+    return (now - t) < validMs;
+  });
+  
+  if (!valid.length) {
+    // Check if any check-ins in last 2 hours
+    const recent = checkins.filter(c => {
+      const t = c.createdAt?.toMillis?.() || 0;
+      return (now - t) < twoHours;
+    });
+    if (!recent.length) return {occ: googleOcc, source:'google'};
+    // Use most recent within 2 hours
+    const latest = recent.sort((a,b) => (b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0))[0];
+    return {occ: latest.occ, source:'user', count:1};
+  }
+  
+  // Count votes
+  const counts = {empty:0, moderate:0, full:0};
+  const verifiedFull = valid.filter(c => c.verified && c.occ === 'full').length;
+  valid.forEach(c => counts[c.occ] = (counts[c.occ]||0) + 1);
+  
+  // Full only if 3+ verified reports
+  if (verifiedFull >= 3) return {occ:'full', source:'user', count:verifiedFull};
+  
+  // 3-way tie or no clear winner → google
+  if (counts.empty > 0 && counts.moderate > 0 && counts.full > 0) {
+    return {occ: googleOcc, source:'google'};
+  }
+  
+  // Majority wins for empty/moderate (1+ person)
+  if (counts.empty > counts.moderate && counts.empty > counts.full) {
+    return {occ:'empty', source:'user', count:counts.empty};
+  }
+  if (counts.moderate >= counts.empty && counts.moderate > counts.full) {
+    return {occ:'moderate', source:'user', count:counts.moderate};
+  }
+  
+  // Not enough verified for full → show google estimate
+  if (counts.full > 0 && verifiedFull < 3) {
+    return {occ: googleOcc, source:'google', note:'Needs 3+ verified reports for full'};
+  }
+  
+  return {occ: googleOcc, source:'google'};
+}
 
 window.submitCI = async function() {
   if (!currentUser) { 
@@ -936,9 +1080,29 @@ window.submitCI = async function() {
   const displayName = currentUser.displayName || currentUser.email.split('@')[0];
 
   try {
-    // Force token refresh to ensure auth is current
-    await currentUser.getIdToken(true);
-    
+    // Check geofencing
+    let verified = false;
+    let locationNote = '';
+    if (shop) {
+      const loc = await checkUserLocation(shop);
+      verified = loc.verified;
+      if (!verified) {
+        if (loc.distance !== null) {
+          locationNote = `Unverified — you appear to be ${loc.distance}m away`;
+        } else {
+          locationNote = 'Unverified — location unavailable';
+        }
+      }
+    }
+
+    // Block unverified full check-ins
+    if (selectedOcc === 'full' && !verified) {
+      toast('Must be at the shop to report Full — helps keep it accurate!');
+      btn.innerHTML = 'Submit check-in';
+      btn.disabled = false;
+      return;
+    }
+
     const checkinData = {
       userId: currentUser.uid,
       userDisplayName: anonMode ? null : displayName,
@@ -948,13 +1112,17 @@ window.submitCI = async function() {
       shopAddr: shop ? shop.addr : '',
       occ: selectedOcc,
       tags: [...selectedVibes],
+      verified,
+      locationNote,
       createdAt: serverTimestamp(),
     };
     await addDoc(collection(db,'checkins'), checkinData);
-    // Update shop locally immediately
+    
+    // Award points
+    const pointsResult = await awardPoints(currentUser.uid, shopId, Date.now());
+    
+    // Update shop locally
     if (shop) {
-      shop.occ = selectedOcc;
-      shop.pct = occPct(selectedOcc);
       shop.googleDefault = false;
       shop.reports = (shop.reports||0) + 1;
       clearMarkers();
@@ -962,16 +1130,17 @@ window.submitCI = async function() {
       renderNearbyList();
     }
     document.getElementById('ci-overlay').classList.remove('open');
-    toast('Check-in saved! 🎉');
+    
+    if (pointsResult.pointsEarned) {
+      toast(`Check-in saved! +1 point (${pointsResult.totalPoints} total) 🎉`);
+    } else {
+      toast('Check-in saved! 🎉');
+    }
     if (shopId) showShop(shopId);
     else showNearby();
   } catch(e) {
     console.error('Check-in error:', e.code, e.message);
-    if(e.code === 'permission-denied') {
-      toast('Permission denied — make sure Firestore rules allow writes');
-    } else {
-      toast('Error: ' + (e.message||'try again'));
-    }
+    toast('Error: ' + (e.message||'try again'));
   } finally {
     btn.innerHTML = 'Submit check-in';
     btn.disabled = false;
@@ -1091,14 +1260,6 @@ window.signOutUser = async function() {
 };
 
 // ── Helpers ──
-window.toggleDropdown = function(id) {
-  const body = document.getElementById(id);
-  const arrow = document.getElementById('arr-'+id);
-  if (!body) return;
-  const isOpen = body.style.display !== 'none';
-  body.style.display = isOpen ? 'none' : 'block';
-  if (arrow) arrow.classList.toggle('open', !isOpen);
-};
 function showPanel(id){ 
   document.querySelectorAll('.panel-view').forEach(v=>{
     v.classList.remove('on');
