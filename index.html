@@ -80,6 +80,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .ftag{font-size:10px;background:var(--warm);color:#6A5A4A;padding:2px 7px;border-radius:20px;}
 .friend-badge{font-size:9px;background:#EDF4EE;color:var(--sage);border-radius:10px;padding:1px 5px;margin-left:3px;vertical-align:middle;}
 .empty-state{padding:40px 20px;text-align:center;color:#A09080;font-size:13px;line-height:1.7;}
+.nearby-row{padding:11px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(28,15,6,0.06);cursor:pointer;transition:background 0.12s;}
+.nearby-row:hover{background:rgba(28,15,6,0.03);}
+.nearby-icon{font-size:20px;flex-shrink:0;}
+.nearby-info{flex:1;min-width:0;}
+.nearby-name{font-size:13px;font-weight:500;color:var(--esp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nearby-addr{font-size:11px;color:#8A7A6A;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nearby-reports{font-size:10px;color:#A09080;margin-top:2px;}
+.nearby-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
+.nearby-pill{font-size:10px;font-weight:500;padding:3px 8px;border-radius:20px;white-space:nowrap;}
+.nearby-checkin-btn{font-size:10px;font-weight:500;color:var(--gold);cursor:pointer;padding:2px 0;}
+.nearby-checkin-btn:hover{text-decoration:underline;}
 
 /* PROFILE */
 .profile-hero{padding:18px 18px 14px;text-align:center;background:white;border-bottom:1px solid rgba(28,15,6,0.06);}
@@ -169,7 +180,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
       <input class="search-input" id="search-input" type="text" placeholder="Search — Bushwick, Williamsburg…">
     </div>
     <div class="tb-actions">
-      <button class="tb-btn active" id="tab-feed" onclick="showFeed()">◎ Activity</button>
+      <button class="tb-btn active" id="tab-nearby" onclick="showNearby()">⊞ Nearby</button>
+      <button class="tb-btn" id="tab-feed" onclick="showFeed()">◎ Activity</button>
       <button class="tb-btn" id="tab-checkin" onclick="openCI(null)">⊕ Check in</button>
       <button class="tb-btn" id="tab-profile" onclick="showMyProfile()">◉ Profile</button>
       <button class="tb-btn gold" onclick="openAdd()">+ Add shop</button>
@@ -189,8 +201,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     </div>
 
     <div class="panel" id="panel">
+      <!-- NEARBY VIEW (default) -->
+      <div class="panel-view on" id="view-nearby">
+        <div class="feed-hdr">
+          <div class="feed-hdr-title">Nearby spots</div>
+          <div style="font-size:11px;color:#8A7A6A;margin-top:3px;">Tap a shop to see details or check in</div>
+        </div>
+        <div class="panel-scroll" id="nearby-list">
+          <div class="empty-state">Loading nearby spots…</div>
+        </div>
+      </div>
+
       <!-- FEED VIEW -->
-      <div class="panel-view on" id="view-feed">
+      <div class="panel-view" id="view-feed">
         <div class="feed-hdr">
           <div class="feed-hdr-title">Activity</div>
           <div style="font-size:11px;color:#8A7A6A;margin-top:3px;">Real-time check-ins near you</div>
@@ -346,7 +369,7 @@ function updateProfileBtn() {
   const btn = document.getElementById('tab-profile');
   if (currentUser) {
     const name = currentUser.displayName || currentUser.email.split('@')[0];
-    btn.textContent = '◉ ' + name.split(' ')[0];
+    btn.textContent = '◉ ' + name;
   } else {
     btn.textContent = '◉ Sign in';
   }
@@ -408,7 +431,9 @@ function searchNearby(center) {
   placesService.nearbySearch({location:center, radius:1400, type:'cafe', keyword:'coffee'}, (results, status) => {
     if (status !== google.maps.places.PlacesServiceStatus.OK || !results) return;
     clearMarkers();
-    shops = results.map(p => ({
+    // Filter out permanently closed places
+    const open = results.filter(p => p.business_status !== 'CLOSED_PERMANENTLY' && p.business_status !== 'CLOSED_TEMPORARILY');
+    shops = open.map(p => ({
       id: p.place_id,
       name: p.name,
       addr: p.vicinity,
@@ -422,6 +447,7 @@ function searchNearby(center) {
     userShops.forEach(us => { if (!shops.find(s=>s.id===us.id)) shops.push(us); });
     shops.forEach(s => dropMarker(s));
     loadOccupancyFromFirestore();
+    renderNearbyList();
     listenFeed();
   });
 }
@@ -545,7 +571,7 @@ window.showShop = function(id) {
   const color = occColor(s.occ);
   document.getElementById('shop-hdr-area').innerHTML = `
     <div class="shop-hdr">
-      <div class="back-link" onclick="showFeed()">← Back to activity</div>
+      <div class="back-link" onclick="showNearby()">← Back to nearby</div>
       <div class="shop-name">☕ ${s.name}</div>
       <div class="shop-addr">${s.addr}</div>
     </div>
@@ -589,6 +615,35 @@ window.showShop = function(id) {
   });
 };
 
+// ── Nearby list ──
+function renderNearbyList() {
+  const el = document.getElementById('nearby-list');
+  if (!el) return;
+  if (!shops.length) { el.innerHTML = '<div class="empty-state">Loading nearby spots…</div>'; return; }
+  el.innerHTML = shops.slice(0,20).map(s => {
+    const color = occColor(s.occ);
+    const cap = s.occ.charAt(0).toUpperCase()+s.occ.slice(1);
+    return `<div class="nearby-row" onclick="showShop('${s.id}')">
+      <div class="nearby-icon">☕</div>
+      <div class="nearby-info">
+        <div class="nearby-name">${s.name}</div>
+        <div class="nearby-addr">${s.addr}</div>
+        ${s.reports>0?`<div class="nearby-reports">${s.reports} report${s.reports!==1?'s':''} today</div>`:'<div class="nearby-reports">No reports yet</div>'}
+      </div>
+      <div class="nearby-right">
+        <div class="nearby-pill" style="background:${color}1a;color:${color};">${cap}</div>
+        <div class="nearby-checkin-btn" onclick="event.stopPropagation();openCI('${s.id}')">Check in</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.showNearby = function() {
+  showPanel('nearby');
+  setActiveTab('tab-nearby');
+  renderNearbyList();
+};
+
 // ── Feed view ──
 window.showFeed = function() {
   showPanel('feed');
@@ -601,7 +656,8 @@ window.showMyProfile = function() {
   if (!currentUser) { showPanel('auth'); setActiveTab('tab-profile'); return; }
   showPanel('profile');
   setActiveTab('tab-profile');
-  renderProfile(currentUser.uid, currentUser.displayName || currentUser.email.split('@')[0], true);
+  const name = currentUser.displayName || currentUser.email.split('@')[0];
+  renderProfile(currentUser.uid, name, true);
 };
 
 window.showUserProfile = async function(uid, name) {
@@ -679,12 +735,13 @@ window.submitCI = async function() {
   btn.disabled = true;
 
   const shopId = currentShopId || (shops[0]&&shops[0].id);
-  const shop = shopId && shops.find(x=>x.id===shopId);
+  const shop = shopId ? shops.find(x=>x.id===shopId) : null;
+  const displayName = currentUser.displayName || currentUser.email.split('@')[0];
 
   try {
-    await addDoc(collection(db,'checkins'), {
+    const checkinData = {
       userId: currentUser.uid,
-      userDisplayName: anonMode ? null : (currentUser.displayName || currentUser.email.split('@')[0]),
+      userDisplayName: anonMode ? null : displayName,
       anonymous: anonMode,
       shopId: shopId || 'unknown',
       shopName: shop ? shop.name : 'Unknown',
@@ -692,12 +749,23 @@ window.submitCI = async function() {
       occ: selectedOcc,
       tags: [...selectedVibes],
       createdAt: serverTimestamp(),
-    });
+    };
+    await addDoc(collection(db,'checkins'), checkinData);
+    // Update shop locally immediately
+    if (shop) {
+      shop.occ = selectedOcc;
+      shop.pct = occPct(selectedOcc);
+      shop.reports = (shop.reports||0) + 1;
+      clearMarkers();
+      shops.forEach(s=>dropMarker(s));
+      renderNearbyList();
+    }
     document.getElementById('ci-overlay').classList.remove('open');
     toast('Check-in saved! 🎉');
-    showFeed();
+    showNearby();
   } catch(e) {
-    toast('Error saving — try again');
+    console.error('Check-in error:', e);
+    toast('Error: ' + (e.message||'try again'));
   } finally {
     btn.innerHTML = 'Submit check-in';
     btn.disabled = false;
@@ -830,7 +898,7 @@ const s = document.createElement('script');
 s.src = `https://maps.googleapis.com/maps/api/js?key=${GKEY}&libraries=places&callback=initMap`;
 s.async=true; s.defer=true;
 document.body.appendChild(s);
-showFeed();
+showNearby();
 </script>
 </body>
 </html>
