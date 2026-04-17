@@ -173,6 +173,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
 .loading-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(245,237,224,0.3);border-top-color:var(--cream);border-radius:50%;animation:spin 0.7s linear infinite;margin-right:6px;}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* FAVORITES */
+.fav-star{background:transparent;border:none;cursor:pointer;font-size:20px;color:#C0B4A8;transition:all 0.15s;padding:4px;line-height:1;}
+.fav-star:hover{transform:scale(1.15);}
+.fav-star.on{color:var(--gold);}
+.fav-star.shop-detail-star{position:absolute;top:12px;right:14px;font-size:24px;}
+.shop-hdr{position:relative;}
+.fav-star.nearby-star{font-size:18px;padding:2px 4px;}
+
+/* VERIFY EMAIL BANNER */
+.verify-banner{background:#FDF4E3;border-bottom:1px solid rgba(200,146,42,0.2);padding:8px 18px;font-size:11px;color:#8A6A2A;display:flex;align-items:center;gap:8px;}
+.verify-banner .vb-link{color:var(--gold);font-weight:500;cursor:pointer;text-decoration:underline;margin-left:auto;flex-shrink:0;}
+.verify-banner .vb-close{color:#A09080;cursor:pointer;padding:0 4px;}
+
+/* FORGOT PASSWORD */
+.forgot-link{font-size:11px;color:var(--gold);text-align:right;cursor:pointer;margin-top:-6px;margin-bottom:4px;}
+.forgot-link:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -186,6 +203,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     <div class="tb-actions">
       <button class="tb-btn active" id="tab-nearby" onclick="showNearby()">⊞ Near you</button>
       <button class="tb-btn" id="tab-feed" onclick="showFeed()">◎ Activity</button>
+      <button class="tb-btn" id="tab-favorites" onclick="showFavorites()">★ Favorites</button>
       <button class="tb-btn" id="tab-profile" onclick="showMyProfile()">◉ Profile</button>
       <button class="tb-btn gold" onclick="openAdd()">+ Add shop</button>
     </div>
@@ -234,6 +252,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
         </div>
       </div>
 
+      <!-- FAVORITES VIEW -->
+      <div class="panel-view" id="view-favorites">
+        <div class="feed-hdr">
+          <div class="feed-hdr-title">Your favorites</div>
+          <div style="font-size:11px;color:#8A7A6A;margin-top:3px;">Your saved coffee spots</div>
+        </div>
+        <div class="panel-scroll" id="favorites-list">
+          <div class="empty-state">Loading favorites…</div>
+        </div>
+      </div>
+
       <!-- PROFILE VIEW -->
       <div class="panel-view" id="view-profile">
         <div id="profile-hdr-area"></div>
@@ -250,6 +279,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
           <input class="auth-input" id="auth-name" type="text" placeholder="Username (e.g. boo_sinclair)">
           <input class="auth-input" id="auth-email" type="email" placeholder="Email address">
           <input class="auth-input" id="auth-pass" type="password" placeholder="Password (min 6 characters)">
+          <div class="forgot-link" id="forgot-link" onclick="sendPasswordReset()" style="display:none;">Forgot password?</div>
           <button class="auth-btn" id="auth-submit-btn" onclick="submitAuth()">Create account</button>
           <div class="auth-divider">or</div>
           <button class="auth-btn google" onclick="signInGoogle()">
@@ -314,8 +344,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, doc, setDoc, getDoc, serverTimestamp, where, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, updateProfile, signOut, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, doc, setDoc, getDoc, serverTimestamp, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBaKe75EL614ivSw4I-FO-Hf08rqknbn-g",
@@ -352,6 +382,9 @@ let anonMode = false;
 const selectedVibes = new Set();
 let authMode = 'signup';
 let feedUnsub = null;
+let userFavorites = new Set(); // Set of shop IDs favorited by current user
+let favoriteShopsData = []; // Full data for favorited shops (for favorites list when not in nearby)
+let dismissedVerifyBanner = false; // per-session dismissal of email verify banner
 
 // ── Auth state ──
 onAuthStateChanged(auth, user => {
@@ -359,6 +392,10 @@ onAuthStateChanged(auth, user => {
   updateProfileBtn();
   if (user) {
     ensureUserDoc(user);
+    loadFavorites(user.uid);
+  } else {
+    userFavorites.clear();
+    favoriteShopsData = [];
   }
 });
 
@@ -384,6 +421,111 @@ function updateProfileBtn() {
   } else {
     btn.textContent = '◉ Sign in';
   }
+}
+
+// ── Favorites ──
+async function loadFavorites(uid) {
+  try {
+    const favSnap = await getDocs(collection(db, 'users', uid, 'favorites'));
+    userFavorites.clear();
+    favoriteShopsData = [];
+    favSnap.docs.forEach(d => {
+      userFavorites.add(d.id);
+      favoriteShopsData.push({id: d.id, ...d.data()});
+    });
+    // Refresh any visible lists
+    renderNearbyList();
+    const favView = document.getElementById('view-favorites');
+    if (favView && favView.classList.contains('on')) renderFavoritesList();
+  } catch(e) { console.log('fav load error', e); }
+}
+
+window.toggleFavorite = async function(shopId, event) {
+  if (event) event.stopPropagation();
+  if (!currentUser) { showPanel('auth'); toast('Sign in to save favorites!'); return; }
+  const shop = shops.find(x => x.id === shopId) || favoriteShopsData.find(x => x.id === shopId);
+  if (!shop) return;
+  const favRef = doc(db, 'users', currentUser.uid, 'favorites', shopId);
+  try {
+    if (userFavorites.has(shopId)) {
+      // Remove
+      await deleteDoc(favRef);
+      userFavorites.delete(shopId);
+      favoriteShopsData = favoriteShopsData.filter(s => s.id !== shopId);
+      toast('Removed from favorites');
+    } else {
+      // Add
+      await setDoc(favRef, {
+        name: shop.name,
+        addr: shop.addr,
+        lat: shop.lat,
+        lng: shop.lng,
+        addedAt: serverTimestamp(),
+      });
+      userFavorites.add(shopId);
+      favoriteShopsData.push({id: shopId, name: shop.name, addr: shop.addr, lat: shop.lat, lng: shop.lng});
+      toast('⭐ Added to favorites!');
+    }
+    // Refresh UI
+    renderNearbyList();
+    const favView = document.getElementById('view-favorites');
+    if (favView && favView.classList.contains('on')) renderFavoritesList();
+    const shopView = document.getElementById('view-shop');
+    if (shopView && shopView.classList.contains('on') && currentShopId === shopId) {
+      updateShopFavoriteStar(shopId);
+    }
+  } catch(e) {
+    console.error('favorite toggle error', e);
+    toast('Could not update favorite');
+  }
+};
+
+function updateShopFavoriteStar(shopId) {
+  const star = document.getElementById('shop-fav-star');
+  if (star) {
+    const isFav = userFavorites.has(shopId);
+    star.className = 'fav-star shop-detail-star' + (isFav ? ' on' : '');
+    star.textContent = isFav ? '★' : '☆';
+  }
+}
+
+window.showFavorites = function() {
+  showPanel('favorites');
+  setActiveTab('tab-favorites');
+  renderFavoritesList();
+};
+
+function renderFavoritesList() {
+  const el = document.getElementById('favorites-list');
+  if (!el) return;
+  if (!currentUser) {
+    el.innerHTML = '<div class="empty-state">Sign in to save your favorite spots.<br><br><div class="nearby-checkin-btn" onclick="showPanel(\'auth\')" style="display:inline-block;color:var(--gold);font-size:13px;">Sign in</div></div>';
+    return;
+  }
+  if (!favoriteShopsData.length) {
+    el.innerHTML = '<div class="empty-state">No favorites yet.<br>Tap the ☆ on any shop to save it here.</div>';
+    return;
+  }
+  el.innerHTML = favoriteShopsData.map(s => {
+    // Try to get live occupancy data from shops array if available
+    const liveShop = shops.find(x => x.id === s.id);
+    const occ = liveShop ? liveShop.occ : 'moderate';
+    const reports = liveShop ? liveShop.reports : 0;
+    const color = occColor(occ);
+    const cap = occ.charAt(0).toUpperCase() + occ.slice(1);
+    return `<div class="nearby-row" onclick="showShop('${s.id}')">
+      <div class="nearby-icon">☕</div>
+      <div class="nearby-info">
+        <div class="nearby-name">${s.name}</div>
+        <div class="nearby-addr">${s.addr}</div>
+        ${liveShop ? (reports>0?`<div class="nearby-reports">${reports} user report${reports!==1?'s':''}</div>`:`<div class="nearby-reports" style="font-style:italic;">Est. from Google data</div>`) : '<div class="nearby-reports" style="font-style:italic;">Tap to view</div>'}
+      </div>
+      <div class="nearby-right">
+        ${liveShop ? `<div class="nearby-pill" style="background:${color}1a;color:${color};">${cap}</div>` : ''}
+        <button class="fav-star nearby-star on" onclick="toggleFavorite('${s.id}',event)">★</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Map ──
@@ -660,6 +802,7 @@ window.showShop = function(id) {
 
   document.getElementById('shop-hdr-area').innerHTML = `
     <div class="shop-hdr">
+      <button class="fav-star shop-detail-star${userFavorites.has(id)?' on':''}" id="shop-fav-star" onclick="toggleFavorite('${id}',event)">${userFavorites.has(id)?'★':'☆'}</button>
       <div class="back-link" onclick="showNearby()">← Back to nearby</div>
       <div class="shop-name">☕ ${s.name}</div>
       <div class="shop-addr">${s.addr}</div>
@@ -794,6 +937,7 @@ function renderNearbyList() {
     const color = occColor(s.occ);
     const cap = s.occ.charAt(0).toUpperCase()+s.occ.slice(1);
     const isClosed = s.isClosed === true; // only true if explicitly confirmed closed by Places API
+    const isFav = userFavorites.has(s.id);
     return `<div class="nearby-row" onclick="showShop('${s.id}')" style="${isClosed?'opacity:0.45;':''}">
       <div class="nearby-icon">☕</div>
       <div class="nearby-info">
@@ -803,7 +947,10 @@ function renderNearbyList() {
       </div>
       <div class="nearby-right">
         <div class="nearby-pill" style="background:${color}1a;color:${color};">${cap}</div>
-        ${!isClosed ? `<div class="nearby-checkin-btn" onclick="event.stopPropagation();openCI('${s.id}')">Check in</div>` : ''}
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${!isClosed ? `<div class="nearby-checkin-btn" onclick="event.stopPropagation();openCI('${s.id}')">Check in</div>` : ''}
+          <button class="fav-star nearby-star${isFav?' on':''}" onclick="toggleFavorite('${s.id}',event)">${isFav?'★':'☆'}</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -854,6 +1001,12 @@ async function renderProfile(uid, name, isMe) {
   const progressPct = Math.min((points/rewardThreshold)*100, 100);
 
   document.getElementById('profile-hdr-area').innerHTML = `
+    ${isMe && currentUser && !currentUser.emailVerified && !dismissedVerifyBanner ? `
+    <div class="verify-banner">
+      <span>✉ Verify your email to secure your account</span>
+      <span class="vb-link" onclick="resendVerifyEmail()">Resend</span>
+      <span class="vb-close" onclick="dismissVerifyBanner()" title="Hide">✕</span>
+    </div>` : ''}
     <div class="profile-hero">
       <div class="back-link" onclick="showNearby()">← Back</div>
       <div class="profile-av" style="background:${color};">${initials}</div>
@@ -896,7 +1049,32 @@ async function renderProfile(uid, name, isMe) {
     const q = query(collection(db,'checkins'), where('userId','==',uid), limit(50));
     const snap = await getDocs(q);
     const items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    
+    // Fetch favorites for this user (if viewing own profile, use cached; otherwise fetch)
+    let profileFavorites = [];
+    if (isMe) {
+      profileFavorites = favoriteShopsData;
+    } else {
+      try {
+        const favSnap = await getDocs(collection(db, 'users', uid, 'favorites'));
+        profileFavorites = favSnap.docs.map(d => ({id: d.id, ...d.data()}));
+      } catch(e) {}
+    }
+    
+    const favoritesHTML = profileFavorites.length ? 
+      `<div class="sec-label">${isMe?'Your':'Their'} favorites (${profileFavorites.length})</div>` +
+      profileFavorites.slice(0,10).map(f => `
+        <div class="history-row" onclick="showShop('${f.id}')">
+          <div style="font-size:17px;color:var(--gold);">★</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:var(--esp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
+            <div style="font-size:11px;color:#8A7A6A;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.addr}</div>
+          </div>
+        </div>
+      `).join('') : '';
+    
     document.getElementById('profile-body').innerHTML =
+      favoritesHTML +
       `<div class="sec-label">Check-in history</div>` +
       (items.length ? items.map(item=>{
         const occC = occColor(item.occ);
@@ -1232,10 +1410,33 @@ window.toggleAuthMode = function() {
   document.getElementById('auth-submit-btn').textContent = authMode==='signup'?'Create account':'Sign in';
   const nameField = document.getElementById('auth-name');
   if(nameField) nameField.style.display = authMode==='signup'?'block':'none';
+  // Show forgot password only on sign-in mode
+  const forgot = document.getElementById('forgot-link');
+  if (forgot) forgot.style.display = authMode==='signin'?'block':'none';
   document.getElementById('auth-toggle-link').innerHTML = authMode==='signup'?'Already have an account? <span>Sign in</span>':'New here? <span>Create account</span>';
   document.getElementById('auth-error').style.display='none';
   document.getElementById('auth-email').value='';
   document.getElementById('auth-pass').value='';
+};
+
+// Send password reset email
+window.sendPasswordReset = async function() {
+  const email = document.getElementById('auth-email').value.trim();
+  if (!email) { showAuthError('Enter your email above, then tap "Forgot password?" again'); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    const errEl = document.getElementById('auth-error');
+    errEl.textContent = `Check ${email} for a password reset link ☕`;
+    errEl.style.display = 'block';
+    errEl.style.background = '#EDF4EE';
+    errEl.style.color = '#5C7A5F';
+    setTimeout(() => { errEl.style.background = '#FAECE4'; errEl.style.color = 'var(--full)'; }, 6000);
+  } catch(e) {
+    const msg = e.code==='auth/user-not-found'?'No account found with that email':
+                e.code==='auth/invalid-email'?'That email address looks invalid':
+                e.message;
+    showAuthError(msg);
+  }
 };
 
 window.signInGoogle = async function() {
@@ -1269,8 +1470,10 @@ window.submitAuth = async function() {
       if(!name){ showAuthError('Please enter a display name'); btn.textContent='Create account'; btn.disabled=false; return; }
       const cred = await createUserWithEmailAndPassword(auth,email,pass);
       await updateProfile(cred.user,{displayName:name});
+      // Send email verification (non-blocking — don't fail signup if this fails)
+      try { await sendEmailVerification(cred.user); } catch(e) { console.log('verify email send failed', e); }
       showFeed();
-      toast('Welcome to STOA! ☕');
+      toast('Welcome to STOA! Check your email to verify ☕');
     } else {
       await signInWithEmailAndPassword(auth,email,pass);
       showFeed();
@@ -1289,7 +1492,27 @@ window.submitAuth = async function() {
   }
 };
 
-function showAuthError(msg){ const el=document.getElementById('auth-error'); el.textContent=msg; el.style.display='block'; }
+function showAuthError(msg){ const el=document.getElementById('auth-error'); el.textContent=msg; el.style.display='block'; el.style.background='#FAECE4'; el.style.color='var(--full)'; }
+
+window.resendVerifyEmail = async function() {
+  if (!currentUser) return;
+  try {
+    await sendEmailVerification(currentUser);
+    toast('Verification email sent — check your inbox ✉');
+  } catch(e) {
+    if (e.code === 'auth/too-many-requests') {
+      toast('Please wait a bit before requesting another email');
+    } else {
+      toast('Could not send — try again later');
+    }
+  }
+};
+
+window.dismissVerifyBanner = function() {
+  dismissedVerifyBanner = true;
+  const banner = document.querySelector('.verify-banner');
+  if (banner) banner.style.display = 'none';
+};
 
 window.signOutUser = async function() {
   await signOut(auth);
