@@ -42,8 +42,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
 
 /* PANEL */
-.panel{width:340px;flex-shrink:0;background:var(--cream);border-left:1px solid rgba(28,15,6,0.08);display:flex;flex-direction:column;overflow:hidden;}
-.panel-view{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.panel{width:340px;flex-shrink:0;background:var(--cream);border-left:1px solid rgba(28,15,6,0.08);display:flex;flex-direction:column;overflow:hidden;position:relative;}
+.panel-view{display:none;flex-direction:column;flex:1;overflow:hidden;position:absolute;top:0;left:0;right:0;bottom:0;background:var(--cream);}
 .panel-view.on{display:flex;}
 .panel-scroll{flex:1;overflow-y:auto;}
 
@@ -203,7 +203,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
     <div class="panel" id="panel">
       <!-- NEARBY VIEW (default) -->
-      <div class="panel-view on" id="view-nearby" style="display:flex;">
+      <div class="panel-view on" id="view-nearby">
         <div class="feed-hdr">
           <div class="feed-hdr-title">Nearby spots</div>
           <div style="font-size:11px;color:#8A7A6A;margin-top:3px;">Tap a shop to see details or check in</div>
@@ -214,7 +214,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
       </div>
 
       <!-- FEED VIEW -->
-      <div class="panel-view" id="view-feed" style="display:none;">
+      <div class="panel-view" id="view-feed">
         <div class="feed-hdr">
           <div class="feed-hdr-title">Activity</div>
           <div style="font-size:11px;color:#8A7A6A;margin-top:3px;">Real-time check-ins near you</div>
@@ -226,7 +226,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
       <!-- SHOP DETAIL VIEW -->
       <div class="panel-view" id="view-shop">
-        <div class="panel-scroll" id="shop-scroll">
+        <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;" id="shop-scroll">
           <div id="shop-hdr-area"></div>
           <div id="shop-body"></div>
         </div>
@@ -643,7 +643,7 @@ window.showShop = function(id) {
 
     if (status === google.maps.places.PlacesServiceStatus.OK && place) {
       // Only show open/closed if Google has confirmed hours data
-      if (false) {
+      if (place.opening_hours && place.opening_hours.periods && place.opening_hours.periods.length > 0) {
         try {
           isShopOpen = place.opening_hours.isOpen();
           const statusEl = document.getElementById('shop-open-status');
@@ -1028,7 +1028,15 @@ window.signOutUser = async function() {
 };
 
 // ── Helpers ──
-function showPanel(id){ document.querySelectorAll('.panel-view').forEach(v=>v.classList.remove('on')); document.getElementById('view-'+id).classList.add('on'); }
+function showPanel(id){ 
+  document.querySelectorAll('.panel-view').forEach(v=>{
+    v.classList.remove('on');
+    v.style.display='none';
+  }); 
+  const target = document.getElementById('view-'+id);
+  target.classList.add('on');
+  target.style.display='flex';
+}
 function setActiveTab(id){ document.querySelectorAll('.tb-btn').forEach(b=>b.classList.remove('active')); if(id) document.getElementById(id)?.classList.add('active'); }
 function occColor(l){ return l==='empty'?'#5C7A5F':l==='moderate'?'#C8922A':'#B5511A'; }
 function occPct(l){ return l==='empty'?Math.floor(Math.random()*22+5):l==='moderate'?Math.floor(Math.random()*28+42):Math.floor(Math.random()*13+82); }
