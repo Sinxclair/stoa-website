@@ -380,6 +380,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
   }
 
   .sheet-handle { display: none; }
+}
 /* Desktop — hide all mobile-only elements */
 @media (min-width: 769px) {
   .sheet-handle,
@@ -1011,8 +1012,6 @@ window.showShop = function(id) {
   if (window.innerWidth <= 768) {
     openListPanel();
   }
-That's it — one line added. Same pattern as the sign-in fix.
-Commit → reload → tap any dot on the map → shop details slide up.
   const color = occColor(s.occ);
   const isEstimate = s.googleDefault !== false;
   
