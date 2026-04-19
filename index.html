@@ -1773,11 +1773,17 @@ window.closeMobileMenu = function() {
 
 window.mobileNav = function(dest) {
   closeMobileMenu();
-  if (dest === 'nearby') showNearby();
-  else if (dest === 'feed') showFeed();
-  else if (dest === 'favorites') showFavorites();
-  else if (dest === 'profile') showMyProfile();
-  else if (dest === 'add') openAdd();
+  // Open the list panel first on mobile so views are visible
+  if (window.innerWidth <= 768) {
+    openListPanel();
+  }
+  setTimeout(() => {
+    if (dest === 'nearby') showNearby();
+    else if (dest === 'feed') showFeed();
+    else if (dest === 'favorites') showFavorites();
+    else if (dest === 'profile') showMyProfile();
+    else if (dest === 'add') openAdd();
+  }, 100);
 };
 
 window.toggleLegend = function() {
