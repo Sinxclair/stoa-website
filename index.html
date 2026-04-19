@@ -319,49 +319,67 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
   .legend.expanded .legend-row { display: flex; }
   .legend.expanded .legend-title { display: block; }
 
-  /* Bottom sheet — starts LOW */
+  /* List panel — hidden until user taps button */
   .panel {
-    position: absolute;
-    bottom: 0;
+    position: fixed;
+    top: 0;
     left: 0;
     right: 0;
+    bottom: 0;
     width: 100%;
-    height: 14vh;
+    height: 100%;
     border-left: none;
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
-    box-shadow: 0 -4px 20px rgba(28, 15, 6, 0.2);
-    transition: height 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
-    z-index: 10;
+    z-index: 90;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
   }
-  .panel.sheet-low {
-  height: 120px !important;
-  min-height: 120px !important;
-}
-  .panel.sheet-mid { height: 55vh; }
-  .panel.sheet-high { height: 90vh; }
+  .panel.list-open {
+    transform: translateY(0);
+  }
 
-  /* Drag handle — big and gold */
-  .sheet-handle {
+  /* Floating "View list" button */
+  .view-list-fab {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px 0 6px;
-    cursor: pointer;
-    flex-shrink: 0;
-    background: var(--cream);
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
-  }
-  .sheet-handle-bar {
-    width: 52px;
-    height: 5px;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     background: var(--gold);
-    border-radius: 3px;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 14px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(28,15,6,0.3);
+    z-index: 20;
+    align-items: center;
+    gap: 6px;
   }
-  .sheet-handle:active .sheet-handle-bar { opacity: 0.6; }
-}
+  .view-list-fab.hidden { display: none; }
 
+  /* Close button inside list panel */
+  .panel-close-btn {
+    display: flex;
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(28,15,6,0.08);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--esp);
+    z-index: 11;
+  }
+
+  .sheet-handle { display: none; }
 /* Desktop — hide all mobile-only elements */
 @media (min-width: 769px) {
   .sheet-handle,
@@ -391,7 +409,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     </div>
     <button class="mobile-hamburger" onclick="openMobileMenu()" style="display:none;">☰</button>
   </div>
-
+<!-- Mobile "View list" button -->
+  <button class="view-list-fab" id="view-list-fab" onclick="openListPanel()" style="display:none;">☰ View list</button>
   <!-- Mobile side menu -->
   <div class="mobile-menu-overlay" id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
   <div class="mobile-menu" id="mobile-menu">
@@ -416,9 +435,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     </div>
 
     <div class="panel" id="panel">
-      <div class="sheet-handle" onclick="cycleSheet()">
-        <div class="sheet-handle-bar"></div>
-      </div>
+      <button class="panel-close-btn" onclick="closeListPanel()" style="display:none;" id="panel-close-btn">✕</button>
       <!-- NEARBY VIEW (default) -->
       <div class="panel-view on" id="view-nearby">
         <div class="feed-hdr">
@@ -1767,28 +1784,25 @@ window.toggleLegend = function() {
   document.querySelector('.legend')?.classList.toggle('expanded');
 };
 
-// Show hamburger + make legend tappable on mobile
-if (window.innerWidth <= 768) {
-  const panel = document.getElementById('panel');
-  if (panel) {
-    panel.classList.add('sheet-low');
-    // Force bottom sheet visible on mobile
-    panel.style.position = 'absolute';
-    panel.style.bottom = '0';
-    panel.style.left = '0';
-    panel.style.right = '0';
-    panel.style.width = '100%';
-    panel.style.height = '90px';
-    panel.style.background = '#F5EDE0';
-    panel.style.borderTopLeftRadius = '22px';
-    panel.style.borderTopRightRadius = '22px';
-    panel.style.boxShadow = '0 -4px 20px rgba(28,15,6,0.2)';
-    panel.style.zIndex = '10';
-    panel.style.display = 'flex';
-    panel.style.flexDirection = 'column';
+window.openListPanel = function() {
+  document.getElementById('panel')?.classList.add('list-open');
+  document.getElementById('view-list-fab').style.display = 'none';
+  document.getElementById('panel-close-btn').style.display = 'flex';
+};
+window.closeListPanel = function() {
+  document.getElementById('panel')?.classList.remove('list-open');
+  if (window.innerWidth <= 768) {
+    document.getElementById('view-list-fab').style.display = 'flex';
   }
+  document.getElementById('panel-close-btn').style.display = 'none';
+};
+
+// Show mobile UI elements
+if (window.innerWidth <= 768) {
   const hamburger = document.querySelector('.mobile-hamburger');
   if (hamburger) hamburger.style.display = 'flex';
+  const fab = document.getElementById('view-list-fab');
+  if (fab) fab.style.display = 'flex';
   const legend = document.querySelector('.legend');
   if (legend) legend.onclick = toggleLegend;
 }
