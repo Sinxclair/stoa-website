@@ -189,22 +189,71 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
 /* FORGOT PASSWORD */
 .forgot-link{font-size:11px;color:var(--gold);text-align:right;cursor:pointer;margin-top:-6px;margin-bottom:4px;}
-.forgot-link:hover{text-decoration:underline;}
+..forgot-link:hover{text-decoration:underline;}
 
-/* MOBILE LAYOUT — stack map on top, list below */
+/* MOBILE — bottom sheet layout */
 @media (max-width: 768px) {
-  .topbar { padding: 9px 12px; gap: 8px; flex-wrap: wrap; }
-  .logo { font-size: 22px; }
-  .search-wrap { order: 3; width: 100%; max-width: 100%; margin-top: 6px; }
-  .tb-actions { gap: 5px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* Top bar: compact, single row */
+  .topbar { padding: 9px 12px; gap: 8px; flex-wrap: nowrap; }
+  .logo { font-size: 20px; }
+  .search-wrap { display: none; } /* hide search on mobile for cleaner look */
+  .tb-actions { gap: 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .tb-actions::-webkit-scrollbar { display: none; }
   .tb-btn { padding: 6px 10px; font-size: 11px; flex-shrink: 0; }
-  .main { flex-direction: column; }
-  .map-wrap { flex: 0 0 38vh; width: 100%; }
-  .panel { width: 100%; flex: 1; border-left: none; border-top: 1px solid rgba(28,15,6,0.08); }
-  .legend { bottom: 10px; left: 10px; padding: 7px 10px; font-size: 10px; }
+
+  /* Main layout: map takes full screen */
+  .main { position: relative; }
+  .map-wrap { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .legend { bottom: 55vh; left: 12px; padding: 6px 10px; font-size: 10px; z-index: 5; transition: bottom 0.3s ease; }
   .legend-title { font-size: 9px; }
   .legend-row { font-size: 10px; }
   .ldot { width: 7px; height: 7px; }
+
+  /* Panel becomes bottom sheet */
+  .panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 50vh;
+    border-left: none;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    box-shadow: 0 -4px 20px rgba(28, 15, 6, 0.15);
+    transition: height 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+    z-index: 10;
+  }
+  .panel.sheet-low { height: 15vh; }
+  .panel.sheet-mid { height: 50vh; }
+  .panel.sheet-high { height: 88vh; }
+
+  /* Adjust legend position as sheet moves */
+  .panel.sheet-low ~ .legend, body:has(.panel.sheet-low) .legend { bottom: 17vh; }
+  .panel.sheet-high ~ .legend, body:has(.panel.sheet-high) .legend { display: none; }
+
+  /* Drag handle at top of sheet */
+  .sheet-handle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px 0 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    background: var(--cream);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+  }
+  .sheet-handle-bar {
+    width: 40px;
+    height: 4px;
+    background: rgba(28, 15, 6, 0.18);
+    border-radius: 2px;
+  }
+  .sheet-handle:active .sheet-handle-bar { background: rgba(28, 15, 6, 0.35); }
+}
+@media (min-width: 769px) {
+  .sheet-handle { display: none; }
 }
 </style>
 </head>
@@ -238,6 +287,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     </div>
 
     <div class="panel" id="panel">
+      <div class="sheet-handle" onclick="cycleSheet()">
+        <div class="sheet-handle-bar"></div>
+      </div>
       <!-- NEARBY VIEW (default) -->
       <div class="panel-view on" id="view-nearby">
         <div class="feed-hdr">
@@ -1552,7 +1604,21 @@ function occPct(l){ return l==='empty'?Math.floor(Math.random()*22+5):l==='moder
 function stringToColor(str){ let h=0; for(let i=0;i<str.length;i++){h=str.charCodeAt(i)+((h<<5)-h);} const colors=['#C8922A','#5C7A5F','#B5511A','#6A7FAA','#8A6AAA','#6A8A7A','#AA6A6A']; return colors[Math.abs(h)%colors.length]; }
 function timeAgo(date){ const s=Math.floor((new Date()-date)/1000); if(s<60) return 'just now'; if(s<3600) return Math.floor(s/60)+' min ago'; if(s<86400) return Math.floor(s/3600)+' hr ago'; return Math.floor(s/86400)+' days ago'; }
 window.toast = function(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); };
-
+// ── Bottom sheet cycling (mobile only) ──
+let sheetState = 'mid'; // low | mid | high
+window.cycleSheet = function() {
+  const panel = document.getElementById('panel');
+  if (!panel) return;
+  // Cycle: mid → high → low → mid
+  const next = sheetState === 'mid' ? 'high' : sheetState === 'high' ? 'low' : 'mid';
+  panel.classList.remove('sheet-low', 'sheet-mid', 'sheet-high');
+  panel.classList.add('sheet-' + next);
+  sheetState = next;
+};
+// Set initial state on mobile load
+if (window.innerWidth <= 768) {
+  document.getElementById('panel')?.classList.add('sheet-mid');
+}
 // ── Boot ──
 const s = document.createElement('script');
 s.src = `https://maps.googleapis.com/maps/api/js?key=${GKEY}&libraries=places&callback=initMap`;
