@@ -191,68 +191,180 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .forgot-link{font-size:11px;color:var(--gold);text-align:right;cursor:pointer;margin-top:-6px;margin-bottom:4px;}
 .forgot-link:hover{text-decoration:underline;}
 
-/* MOBILE — bottom sheet layout */
+/* MOBILE — slim bar, side menu, bottom sheet */
 @media (max-width: 768px) {
-  /* Top bar: compact, single row */
-  .topbar { padding: 9px 12px; gap: 8px; flex-wrap: nowrap; }
-  .logo { font-size: 20px; }
-  .search-wrap { display: none; } /* hide search on mobile for cleaner look */
-  .tb-actions { gap: 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .tb-actions::-webkit-scrollbar { display: none; }
-  .tb-btn { padding: 6px 9px; font-size: 10px; flex-shrink: 0; }
-/* Hide less-important buttons on tiny screens */
-.tb-btn#tab-feed { display: none; }
+  /* Thin top bar — just logo + hamburger */
+  .topbar { padding: 10px 14px; gap: 8px; }
+  .logo { font-size: 22px; }
+  .search-wrap { display: none; }
+  .tb-actions { display: none; }
 
-  /* Main layout: map takes full screen */
+  /* Hamburger button */
+  .mobile-hamburger {
+    display: flex;
+    margin-left: auto;
+    background: rgba(245,237,224,0.08);
+    border: 1px solid rgba(245,237,224,0.16);
+    color: var(--cream);
+    border-radius: 50px;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+  }
+
+  /* Side menu (slides from right) */
+  .mobile-menu-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 15, 6, 0.5);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .mobile-menu-overlay.open { opacity: 1; pointer-events: all; }
+
+  .mobile-menu {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 75%;
+    max-width: 280px;
+    background: var(--esp);
+    z-index: 101;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.2);
+  }
+  .mobile-menu.open { transform: translateX(0); }
+
+  .mobile-menu-close {
+    background: transparent;
+    border: none;
+    color: var(--cream);
+    font-size: 20px;
+    width: 38px;
+    height: 38px;
+    margin: 0 14px 12px auto;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+
+  .mobile-menu-item {
+    background: transparent;
+    border: none;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    text-align: left;
+    padding: 14px 22px;
+    cursor: pointer;
+    border-bottom: 0.5px solid rgba(245,237,224,0.08);
+    transition: background 0.15s;
+  }
+  .mobile-menu-item:hover { background: rgba(245,237,224,0.05); }
+  .mobile-menu-item.gold { color: var(--gold); font-weight: 500; }
+
+  /* Map takes full screen */
   .main { position: relative; }
   .map-wrap { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .legend { bottom: 55vh; left: 12px; padding: 6px 10px; font-size: 10px; z-index: 5; transition: bottom 0.3s ease; }
-  .legend-title { font-size: 9px; }
-  .legend-row { font-size: 10px; }
-  .ldot { width: 7px; height: 7px; }
 
-  /* Panel becomes bottom sheet */
+  /* Legend becomes a tiny ? icon */
+  .legend {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    bottom: auto;
+    top: 72px;
+    left: auto;
+    right: 12px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+    box-shadow: 0 2px 8px rgba(28,15,6,0.2);
+  }
+  .legend-title, .legend-row { display: none; }
+  .legend::before {
+    content: '?';
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    font-weight: 500;
+  }
+  .legend.expanded {
+    width: auto;
+    height: auto;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: white;
+    color: var(--esp);
+    gap: 6px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .legend.expanded::before { display: none; }
+  .legend.expanded .legend-title,
+  .legend.expanded .legend-row { display: flex; }
+  .legend.expanded .legend-title { display: block; }
+
+  /* Bottom sheet — starts LOW */
   .panel {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     width: 100%;
-    height: 50vh;
+    height: 14vh;
     border-left: none;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    box-shadow: 0 -4px 20px rgba(28, 15, 6, 0.15);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    box-shadow: 0 -4px 20px rgba(28, 15, 6, 0.2);
     transition: height 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
     z-index: 10;
   }
-  .panel.sheet-low { height: 15vh; }
-  .panel.sheet-mid { height: 50vh; }
-  .panel.sheet-high { height: 88vh; }
+  .panel.sheet-low { height: 14vh; }
+  .panel.sheet-mid { height: 55vh; }
+  .panel.sheet-high { height: 90vh; }
 
-  /* Adjust legend position as sheet moves */
-  .panel.sheet-low ~ .legend, body:has(.panel.sheet-low) .legend { bottom: 17vh; }
-  .panel.sheet-high ~ .legend, body:has(.panel.sheet-high) .legend { display: none; }
-
-  /* Drag handle at top of sheet */
+  /* Drag handle — big and gold */
   .sheet-handle {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 8px 0 4px;
+    padding: 10px 0 6px;
     cursor: pointer;
     flex-shrink: 0;
     background: var(--cream);
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
   }
   .sheet-handle-bar {
-    width: 48px;
+    width: 52px;
     height: 5px;
     background: var(--gold);
     border-radius: 3px;
   }
-  .sheet-handle:active .sheet-handle-bar { background: rgba(28, 15, 6, 0.35); }
+  .sheet-handle:active .sheet-handle-bar { opacity: 0.6; }
+}
+
+/* Desktop — hide all mobile-only elements */
+@media (min-width: 769px) {
+  .sheet-handle,
+  .mobile-hamburger,
+  .mobile-menu-overlay,
+  .mobile-menu { display: none !important; }
 }
 @media (min-width: 769px) {
   .sheet-handle { display: none; }
@@ -274,6 +386,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
       <button class="tb-btn" id="tab-profile" onclick="showMyProfile()">◉ Profile</button>
       <button class="tb-btn gold" onclick="openAdd()">+ Add shop</button>
     </div>
+    <button class="mobile-hamburger" onclick="openMobileMenu()" style="display:none;">☰</button>
+  </div>
+
+  <!-- Mobile side menu -->
+  <div class="mobile-menu-overlay" id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+  <div class="mobile-menu" id="mobile-menu">
+    <button class="mobile-menu-close" onclick="closeMobileMenu()">✕</button>
+    <button class="mobile-menu-item" onclick="mobileNav('nearby')">⊞ Near you</button>
+    <button class="mobile-menu-item" onclick="mobileNav('feed')">◎ Activity</button>
+    <button class="mobile-menu-item" onclick="mobileNav('favorites')">★ Favorites</button>
+    <button class="mobile-menu-item" onclick="mobileNav('profile')">◉ Sign in / Profile</button>
+    <button class="mobile-menu-item gold" onclick="mobileNav('add')">+ Add shop</button>
   </div>
 
   <div class="main">
@@ -1606,20 +1730,47 @@ function occPct(l){ return l==='empty'?Math.floor(Math.random()*22+5):l==='moder
 function stringToColor(str){ let h=0; for(let i=0;i<str.length;i++){h=str.charCodeAt(i)+((h<<5)-h);} const colors=['#C8922A','#5C7A5F','#B5511A','#6A7FAA','#8A6AAA','#6A8A7A','#AA6A6A']; return colors[Math.abs(h)%colors.length]; }
 function timeAgo(date){ const s=Math.floor((new Date()-date)/1000); if(s<60) return 'just now'; if(s<3600) return Math.floor(s/60)+' min ago'; if(s<86400) return Math.floor(s/3600)+' hr ago'; return Math.floor(s/86400)+' days ago'; }
 window.toast = function(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); };
-// ── Bottom sheet cycling (mobile only) ──
-let sheetState = 'mid'; // low | mid | high
+// ── Mobile menu + bottom sheet ──
+let sheetState = 'low'; // low | mid | high
 window.cycleSheet = function() {
   const panel = document.getElementById('panel');
   if (!panel) return;
-  // Cycle: mid → high → low → mid
-  const next = sheetState === 'mid' ? 'high' : sheetState === 'high' ? 'low' : 'mid';
+  // Cycle: low → mid → high → low
+  const next = sheetState === 'low' ? 'mid' : sheetState === 'mid' ? 'high' : 'low';
   panel.classList.remove('sheet-low', 'sheet-mid', 'sheet-high');
   panel.classList.add('sheet-' + next);
   sheetState = next;
 };
-// Set initial state on mobile load
+
+window.openMobileMenu = function() {
+  document.getElementById('mobile-menu').classList.add('open');
+  document.getElementById('mobile-menu-overlay').classList.add('open');
+};
+window.closeMobileMenu = function() {
+  document.getElementById('mobile-menu').classList.remove('open');
+  document.getElementById('mobile-menu-overlay').classList.remove('open');
+};
+
+window.mobileNav = function(dest) {
+  closeMobileMenu();
+  if (dest === 'nearby') showNearby();
+  else if (dest === 'feed') showFeed();
+  else if (dest === 'favorites') showFavorites();
+  else if (dest === 'profile') showMyProfile();
+  else if (dest === 'add') openAdd();
+};
+
+window.toggleLegend = function() {
+  document.querySelector('.legend')?.classList.toggle('expanded');
+};
+
+// Show hamburger + make legend tappable on mobile
 if (window.innerWidth <= 768) {
-  document.getElementById('panel')?.classList.add('sheet-mid');
+  document.getElementById('panel')?.classList.add('sheet-low');
+  const hamburger = document.querySelector('.mobile-hamburger');
+  if (hamburger) hamburger.style.display = 'flex';
+  const legend = document.querySelector('.legend');
+  if (legend) legend.onclick = toggleLegend;
 }
 // ── Boot ──
 const s = document.createElement('script');
