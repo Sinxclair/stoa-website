@@ -1766,7 +1766,24 @@ window.toggleLegend = function() {
 
 // Show hamburger + make legend tappable on mobile
 if (window.innerWidth <= 768) {
-  document.getElementById('panel')?.classList.add('sheet-low');
+  const panel = document.getElementById('panel');
+  if (panel) {
+    panel.classList.add('sheet-low');
+    // Force bottom sheet visible on mobile
+    panel.style.position = 'absolute';
+    panel.style.bottom = '0';
+    panel.style.left = '0';
+    panel.style.right = '0';
+    panel.style.width = '100%';
+    panel.style.height = '90px';
+    panel.style.background = '#F5EDE0';
+    panel.style.borderTopLeftRadius = '22px';
+    panel.style.borderTopRightRadius = '22px';
+    panel.style.boxShadow = '0 -4px 20px rgba(28,15,6,0.2)';
+    panel.style.zIndex = '10';
+    panel.style.display = 'flex';
+    panel.style.flexDirection = 'column';
+  }
   const hamburger = document.querySelector('.mobile-hamburger');
   if (hamburger) hamburger.style.display = 'flex';
   const legend = document.querySelector('.legend');
