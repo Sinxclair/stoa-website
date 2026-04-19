@@ -190,6 +190,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 /* FORGOT PASSWORD */
 .forgot-link{font-size:11px;color:var(--gold);text-align:right;cursor:pointer;margin-top:-6px;margin-bottom:4px;}
 .forgot-link:hover{text-decoration:underline;}
+
+/* MOBILE LAYOUT — stack map on top, list below */
+@media (max-width: 768px) {
+  .topbar { padding: 9px 12px; gap: 8px; flex-wrap: wrap; }
+  .logo { font-size: 22px; }
+  .search-wrap { order: 3; width: 100%; max-width: 100%; margin-top: 6px; }
+  .tb-actions { gap: 5px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tb-btn { padding: 6px 10px; font-size: 11px; flex-shrink: 0; }
+  .main { flex-direction: column; }
+  .map-wrap { flex: 0 0 38vh; width: 100%; }
+  .panel { width: 100%; flex: 1; border-left: none; border-top: 1px solid rgba(28,15,6,0.08); }
+  .legend { bottom: 10px; left: 10px; padding: 7px 10px; font-size: 10px; }
+  .legend-title { font-size: 9px; }
+  .legend-row { font-size: 10px; }
+  .ldot { width: 7px; height: 7px; }
+}
 </style>
 </head>
 <body>
