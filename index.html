@@ -1764,17 +1764,26 @@ window.toggleLegend = function() {
   document.querySelector('.legend')?.classList.toggle('expanded');
 };
 
-// Force bottom sheet visible on mobile
+// Show hamburger + make legend tappable on mobile
 if (window.innerWidth <= 768) {
   const panel = document.getElementById('panel');
   if (panel) {
-    panel.style.cssText = 'position:fixed !important; bottom:0 !important; left:0 !important; right:0 !important; width:100% !important; height:35vh !important; background:#F5EDE0 !important; border-top-left-radius:22px !important; border-top-right-radius:22px !important; box-shadow:0 -8px 30px rgba(28,15,6,0.3) !important; z-index:50 !important; display:flex !important; flex-direction:column !important; overflow:hidden !important;';
+    panel.classList.add('sheet-low');
+    // Force bottom sheet visible on mobile
+    panel.style.position = 'absolute';
+    panel.style.bottom = '0';
+    panel.style.left = '0';
+    panel.style.right = '0';
+    panel.style.width = '100%';
+    panel.style.height = '90px';
+    panel.style.background = '#F5EDE0';
+    panel.style.borderTopLeftRadius = '22px';
+    panel.style.borderTopRightRadius = '22px';
+    panel.style.boxShadow = '0 -4px 20px rgba(28,15,6,0.2)';
+    panel.style.zIndex = '10';
+    panel.style.display = 'flex';
+    panel.style.flexDirection = 'column';
   }
-  const hamburger = document.querySelector('.mobile-hamburger');
-  if (hamburger) hamburger.style.display = 'flex';
-  const legend = document.querySelector('.legend');
-  if (legend) legend.onclick = toggleLegend;
-}
   const hamburger = document.querySelector('.mobile-hamburger');
   if (hamburger) hamburger.style.display = 'flex';
   const legend = document.querySelector('.legend');
