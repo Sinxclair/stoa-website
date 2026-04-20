@@ -1011,7 +1011,6 @@ function renderFeedItems(items) {
     const shopId = item.shopId;
     const timeStr = item.createdAt ? timeAgo(item.createdAt.toDate()) : 'just now';
     const tags = item.tags || [];
-    const isMe = currentUser && item.userId === currentUser.uid;
     const showFounder = !isAnon && isFounderName(displayName);
     return `<div class="feed-item">
       <div class="av" style="background:${color};" onclick="${!isAnon&&!isMe?`showUserProfile('${item.userId}','${displayName}')`:''}">${initials}</div>
