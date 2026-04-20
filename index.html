@@ -577,8 +577,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, updateProfile, signOut, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, doc, setDoc, getDoc, serverTimestamp, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, doc, setDoc, getDoc, serverTimestamp, where, getDocs, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyBaKe75EL614ivSw4I-FO-Hf08rqknbn-g",
   authDomain: "stoa-app-b9d8b.firebaseapp.com",
@@ -626,10 +625,13 @@ onAuthStateChanged(auth, user => {
     ensureUserDoc(user);
     loadFavorites(user.uid);
     loadFriends(user.uid);
+    loadFriendRequests(user.uid);
   } else {
     userFavorites.clear();
     favoriteShopsData = [];
     userFriends.clear();
+    incomingFriendRequests = [];
+    outgoingFriendRequests.clear();
   }
 });
 
@@ -918,6 +920,8 @@ function dropMarker(shop) {
 }
 // ── Friends + nearby helpers ──
 let userFriends = new Set(); // UIDs of current user's friends
+let incomingFriendRequests = []; // pending requests others sent me
+let outgoingFriendRequests = new Set(); // UIDs I've sent requests to
 
 async function loadFriends(uid) {
   if (!uid) { userFriends.clear(); return; }
@@ -928,6 +932,132 @@ async function loadFriends(uid) {
   } catch(e) { console.log('friends load error', e); }
 }
 
+async function loadFriendRequests(uid) {
+  if (!uid) return;
+  try {
+    // Incoming — requests sent TO me
+    const incomingSnap = await getDocs(collection(db, 'users', uid, 'friendRequests'));
+    incomingFriendRequests = incomingSnap.docs.map(d => ({id: d.id, ...d.data()}));
+    
+    // Outgoing — requests I sent
+    const outgoingSnap = await getDocs(collection(db, 'users', uid, 'sentRequests'));
+    outgoingFriendRequests.clear();
+    outgoingSnap.docs.forEach(d => outgoingFriendRequests.add(d.id));
+  } catch(e) { console.log('friend requests load error', e); }
+}
+
+// Search users by displayName (case-insensitive starts-with)
+window.searchUsers = async function(queryStr) {
+  if (!queryStr || queryStr.length < 2) return [];
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    const lowerQ = queryStr.toLowerCase();
+    return snap.docs
+      .map(d => ({id: d.id, ...d.data()}))
+      .filter(u => {
+        if (u.id === currentUser?.uid) return false; // exclude self
+        const name = (u.displayName || '').toLowerCase();
+        const email = (u.email || '').toLowerCase();
+        return name.includes(lowerQ) || email.includes(lowerQ);
+      })
+      .slice(0, 20);
+  } catch(e) { console.log('user search error', e); return []; }
+};
+
+// Send a friend request
+window.sendFriendRequest = async function(toUid, toName) {
+  if (!currentUser) { toast('Sign in first!'); return; }
+  if (toUid === currentUser.uid) return;
+  if (userFriends.has(toUid)) { toast('Already friends!'); return; }
+  if (outgoingFriendRequests.has(toUid)) { toast('Request already sent'); return; }
+  try {
+    const fromName = currentUser.displayName || currentUser.email.split('@')[0];
+    const batch = writeBatch(db);
+    // In recipient's inbox
+    batch.set(doc(db, 'users', toUid, 'friendRequests', currentUser.uid), {
+      fromUid: currentUser.uid,
+      fromName,
+      createdAt: serverTimestamp(),
+    });
+    // In my sent list
+    batch.set(doc(db, 'users', currentUser.uid, 'sentRequests', toUid), {
+      toUid,
+      toName,
+      createdAt: serverTimestamp(),
+    });
+    await batch.commit();
+    outgoingFriendRequests.add(toUid);
+    toast(`Friend request sent to ${toName}! ☕`);
+    return true;
+  } catch(e) {
+    console.error('send request error', e);
+    toast('Could not send request');
+    return false;
+  }
+};
+
+// Accept a friend request
+window.acceptFriendRequest = async function(fromUid, fromName) {
+  if (!currentUser) return;
+  try {
+    const myName = currentUser.displayName || currentUser.email.split('@')[0];
+    const batch = writeBatch(db);
+    // Add to both friend lists
+    batch.set(doc(db, 'users', currentUser.uid, 'friends', fromUid), {
+      uid: fromUid, displayName: fromName, addedAt: serverTimestamp(),
+    });
+    batch.set(doc(db, 'users', fromUid, 'friends', currentUser.uid), {
+      uid: currentUser.uid, displayName: myName, addedAt: serverTimestamp(),
+    });
+    // Remove the request from both sides
+    batch.delete(doc(db, 'users', currentUser.uid, 'friendRequests', fromUid));
+    batch.delete(doc(db, 'users', fromUid, 'sentRequests', currentUser.uid));
+    await batch.commit();
+    
+    userFriends.add(fromUid);
+    incomingFriendRequests = incomingFriendRequests.filter(r => r.fromUid !== fromUid);
+    toast(`You and ${fromName} are now friends! 🤝`);
+    return true;
+  } catch(e) {
+    console.error('accept request error', e);
+    toast('Could not accept request');
+    return false;
+  }
+};
+
+// Reject a friend request
+window.rejectFriendRequest = async function(fromUid) {
+  if (!currentUser) return;
+  try {
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'users', currentUser.uid, 'friendRequests', fromUid));
+    batch.delete(doc(db, 'users', fromUid, 'sentRequests', currentUser.uid));
+    await batch.commit();
+    incomingFriendRequests = incomingFriendRequests.filter(r => r.fromUid !== fromUid);
+    toast('Request declined');
+    return true;
+  } catch(e) {
+    console.error('reject request error', e);
+    return false;
+  }
+};
+
+// Remove a friend (unfriend)
+window.removeFriend = async function(friendUid) {
+  if (!currentUser) return;
+  try {
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'users', currentUser.uid, 'friends', friendUid));
+    batch.delete(doc(db, 'users', friendUid, 'friends', currentUser.uid));
+    await batch.commit();
+    userFriends.delete(friendUid);
+    toast('Friend removed');
+    return true;
+  } catch(e) {
+    console.error('remove friend error', e);
+    return false;
+  }
+};
 function getMapCenterCoords() {
   if (!map) return null;
   const c = map.getCenter();
