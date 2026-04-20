@@ -525,6 +525,51 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
   </div>
 </div>
 
+<!-- WELCOME SCREEN -->
+<div id="welcome-screen" style="display:none;position:fixed;inset:0;background:var(--esp);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;">
+  <div style="font-family:'DM Serif Display',serif;font-size:56px;color:var(--cream);letter-spacing:-1px;margin-bottom:6px;">
+    STO<span style="color:var(--gold);">A</span>
+  </div>
+  <div style="font-family:'DM Serif Display',serif;font-style:italic;font-size:18px;color:var(--gold);margin-bottom:36px;">Know before you go.</div>
+  <div style="color:rgba(245,237,224,0.75);font-size:14px;line-height:1.6;max-width:300px;margin-bottom:44px;">
+    Real-time coffee shop occupancy in NYC. See which spots are empty, moderate, or full before you walk over.
+  </div>
+  <button onclick="welcomeSignup()" style="background:var(--gold);color:white;border:none;border-radius:50px;padding:16px 36px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;margin-bottom:12px;min-width:260px;box-shadow:0 4px 16px rgba(200,146,42,0.3);">
+    Sign up ☕
+  </button>
+  <button onclick="openBetaNameModal()" style="background:transparent;color:var(--cream);border:1px solid rgba(245,237,224,0.25);border-radius:50px;padding:16px 36px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:400;cursor:pointer;min-width:260px;">
+    Explore as beta tester
+  </button>
+  <div style="color:rgba(245,237,224,0.4);font-size:11px;margin-top:28px;">Beta data resets at end of session</div>
+</div>
+
+<!-- BETA NAME MODAL -->
+<div id="beta-name-modal" style="display:none;position:fixed;inset:0;background:rgba(28,15,6,0.7);z-index:600;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--cream);border-radius:18px;padding:28px 24px;max-width:380px;width:100%;">
+    <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--esp);margin-bottom:6px;">Pick a display name</div>
+    <div style="font-size:12px;color:#8A7A6A;margin-bottom:18px;line-height:1.5;">This is what other users will see when you check in. Just for today — not a real account.</div>
+    <input id="beta-name-input" type="text" placeholder="e.g. coffee_lover_23" maxlength="20" style="width:100%;background:white;border:0.5px solid rgba(28,15,6,0.15);border-radius:10px;padding:11px 14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--esp);outline:none;margin-bottom:14px;">
+    <button onclick="confirmBetaName()" style="width:100%;background:var(--esp);color:var(--cream);border:none;border-radius:10px;padding:13px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:8px;">Continue as beta</button>
+    <button onclick="cancelBetaName()" style="width:100%;background:transparent;color:#8A7A6A;border:none;padding:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Back</button>
+  </div>
+</div>
+
+<!-- FREE FOREVER MODAL -->
+<div id="free-forever-modal" style="display:none;position:fixed;inset:0;background:rgba(28,15,6,0.7);z-index:600;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--cream);border-radius:18px;padding:32px 26px;max-width:380px;width:100%;text-align:center;">
+    <div style="font-size:44px;margin-bottom:12px;">☕</div>
+    <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--esp);margin-bottom:10px;line-height:1.2;">Sign up now — STOA is free forever for you</div>
+    <div style="font-size:13px;color:#8A7A6A;line-height:1.6;margin-bottom:22px;">Early supporters who sign up during beta get lifetime free access when STOA launches. Your beta check-ins and favorites will transfer to your account.</div>
+    <button onclick="freeForeverToSignup()" style="width:100%;background:var(--gold);color:white;border:none;border-radius:10px;padding:13px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:10px;">Claim free forever access 🔒</button>
+    <button onclick="freeForeverContinue()" style="background:transparent;color:#8A7A6A;border:none;padding:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Maybe later — keep exploring</button>
+  </div>
+</div>
+
+<!-- BETA MODE BANNER -->
+<div id="beta-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:var(--gold);color:white;padding:7px 16px;text-align:center;font-size:12px;font-weight:500;z-index:400;cursor:pointer;" onclick="openFreeForeverModal()">
+  ☕ Beta mode — <span style="text-decoration:underline;">Sign up now for FREE forever access</span>
+</div>
+
 <!-- CHECK IN MODAL -->
 <div class="overlay" id="ci-overlay" onclick="closeCiOutside(event)">
   <div class="sheet">
@@ -633,7 +678,86 @@ let feedUnsub = null;
 let userFavorites = new Set(); // Set of shop IDs favorited by current user
 let favoriteShopsData = []; // Full data for favorited shops (for favorites list when not in nearby)
 let dismissedVerifyBanner = false; // per-session dismissal of email verify banner
+// ── Beta mode ──
+let betaMode = false;
+let betaUsername = null;
+let betaUserId = null; // fake UID for this session
 
+window.welcomeSignup = function() {
+  document.getElementById('welcome-screen').style.display = 'none';
+  sessionStorage.setItem('stoa_welcomed', '1');
+  showPanel('auth');
+  if (window.innerWidth <= 768) openListPanel();
+};
+
+window.openBetaNameModal = function() {
+  const modal = document.getElementById('beta-name-modal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('beta-name-input')?.focus(), 100);
+};
+
+window.cancelBetaName = function() {
+  document.getElementById('beta-name-modal').style.display = 'none';
+};
+
+window.confirmBetaName = function() {
+  const input = document.getElementById('beta-name-input');
+  const name = (input.value || '').trim();
+  if (!name || name.length < 2) { toast('Pick a display name (2+ chars)'); return; }
+  // Store beta session
+  betaMode = true;
+  betaUsername = name;
+  betaUserId = 'beta_' + Math.random().toString(36).substring(2, 10);
+  sessionStorage.setItem('stoa_beta', JSON.stringify({name, uid: betaUserId}));
+  sessionStorage.setItem('stoa_welcomed', '1');
+  // Close modals + welcome
+  document.getElementById('beta-name-modal').style.display = 'none';
+  document.getElementById('welcome-screen').style.display = 'none';
+  // Show banner
+  document.getElementById('beta-banner').style.display = 'block';
+  document.body.style.paddingTop = '30px'; // account for banner
+  // Immediately show the free forever modal
+  setTimeout(openFreeForeverModal, 500);
+  toast(`Welcome, ${name}! You're in beta mode ☕`);
+};
+
+window.openFreeForeverModal = function() {
+  document.getElementById('free-forever-modal').style.display = 'flex';
+};
+
+window.freeForeverContinue = function() {
+  document.getElementById('free-forever-modal').style.display = 'none';
+};
+
+window.freeForeverToSignup = function() {
+  document.getElementById('free-forever-modal').style.display = 'none';
+  // Mark that they were converting from beta so we can merge later
+  sessionStorage.setItem('stoa_converting_from_beta', '1');
+  showPanel('auth');
+  if (window.innerWidth <= 768) openListPanel();
+};
+
+// On first visit, show welcome screen (unless signed in or already seen)
+function maybeShowWelcome() {
+  if (currentUser) return; // signed in, don't show
+  if (sessionStorage.getItem('stoa_welcomed')) {
+    // Check if they were in beta mode
+    const beta = sessionStorage.getItem('stoa_beta');
+    if (beta) {
+      try {
+        const {name, uid} = JSON.parse(beta);
+        betaMode = true;
+        betaUsername = name;
+        betaUserId = uid;
+        document.getElementById('beta-banner').style.display = 'block';
+        document.body.style.paddingTop = '30px';
+      } catch(e) {}
+    }
+    return;
+  }
+  const welcomeEl = document.getElementById('welcome-screen');
+  if (welcomeEl) welcomeEl.style.display = 'flex';
+}
 // ── Auth state ──
 let friendRequestUnsub = null;
 
@@ -730,11 +854,12 @@ function updateProfileBtn() {
   if (currentUser) {
     const name = currentUser.displayName || currentUser.email.split('@')[0];
     btn.textContent = '◉ ' + name;
+  } else if (betaMode) {
+    btn.textContent = '◉ ' + betaUsername + ' (beta)';
   } else {
     btn.textContent = '◉ Sign in';
   }
 }
-
 // ── Favorites ──
 async function loadFavorites(uid) {
   try {
@@ -1267,17 +1392,8 @@ function isShopOpenNow(openingHours) {
 }
 
 // ── Show shop ──
-let guestShopViews = 0;
 window.showShop = function(id) {
-  // Guest gate — let them see 1 shop, then prompt signup
-  if (!currentUser) {
-    if (guestShopViews >= 1) {
-      // Already viewed one — show signup gate
-      showSignupGate();
-      return;
-    }
-    guestShopViews++;
-  }
+  // No guest gate — users pick Sign up or Beta on welcome screen
   currentShopId = id;
   const s = shops.find(x=>x.id===id);
   if (!s) return;
@@ -1594,7 +1710,7 @@ async function renderProfile(uid, name, isMe) {
 
 // ── Check in ──
 window.openCI = function(shopId) {
-  if (!currentUser) { showPanel('auth'); toast('Sign in to check in!'); return; }
+  if (!currentUser && !betaMode) { showPanel('auth'); toast('Sign in to check in!'); return; }
   const shopForCI = shopId ? shops.find(x=>x.id===shopId) : null;
   if (shopForCI && shopForCI.isClosed) { toast('This shop is currently closed'); return; }
   currentShopId = shopId;
@@ -1784,7 +1900,7 @@ function computeOccupancy(checkins, googleOcc) {
 }
 
 window.submitCI = async function() {
-  if (!currentUser) { 
+  if (!currentUser && !betaMode) { 
     document.getElementById('ci-overlay').classList.remove('open');
     showPanel('auth');
     toast('Sign in first!'); 
@@ -1796,7 +1912,7 @@ window.submitCI = async function() {
 
   const shopId = currentShopId || (shops[0]&&shops[0].id);
   const shop = shopId ? shops.find(x=>x.id===shopId) : null;
-  const displayName = currentUser.displayName || currentUser.email.split('@')[0];
+  const displayName = currentUser ? (currentUser.displayName || currentUser.email.split('@')[0]) : betaUsername;
 
   try {
     // Check geofencing
@@ -1851,9 +1967,10 @@ window.submitCI = async function() {
     }
 
     const checkinData = {
-      userId: currentUser.uid,
-      userDisplayName: anonMode ? null : displayName,
+      userId: currentUser?.uid || betaUserId,
+      userDisplayName: anonMode ? null : (currentUser ? displayName : betaUsername),
       anonymous: anonMode,
+      isBeta: !currentUser && betaMode, // flag beta check-ins
       shopId: shopId || 'unknown',
       shopName: shop ? shop.name : 'Unknown',
       shopAddr: shop ? shop.addr : '',
@@ -1865,8 +1982,8 @@ window.submitCI = async function() {
     };
     await addDoc(collection(db,'checkins'), checkinData);
     
-    // Award points
-    const pointsResult = await awardPoints(currentUser.uid, shopId, Date.now());
+    // Award points (only for real users, not beta)
+    const pointsResult = currentUser ? await awardPoints(currentUser.uid, shopId, Date.now()) : {pointsEarned:0, totalPoints:0};
     
     // Update shop locally
     if (shop) {
@@ -2290,6 +2407,21 @@ if (window.innerWidth <= 768) {
   const legend = document.querySelector('.legend');
   if (legend) legend.onclick = toggleLegend;
 }
+// Clear beta session on tab close (data wipes)
+window.addEventListener('beforeunload', async () => {
+  if (betaMode && betaUserId) {
+    // Attempt to delete this session's beta check-ins (best effort)
+    try {
+      const q = query(collection(db, 'checkins'), where('userId', '==', betaUserId), limit(50));
+      const snap = await getDocs(q);
+      snap.docs.forEach(d => deleteDoc(doc(db, 'checkins', d.id)).catch(()=>{}));
+    } catch(e) {}
+    sessionStorage.removeItem('stoa_beta');
+  }
+});
+
+// Show welcome screen on first load
+setTimeout(maybeShowWelcome, 300);
 // ── Boot ──
 const s = document.createElement('script');
 s.src = `https://maps.googleapis.com/maps/api/js?key=${GKEY}&libraries=places&callback=initMap`;
