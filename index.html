@@ -988,6 +988,7 @@ window.initMap = function() {
       {featureType:'poi.business',stylers:[{visibility:'off'}]},
     ],
     disableDefaultUI:false, zoomControl:true, mapTypeControl:false, streetViewControl:false, fullscreenControl:false,
+    gestureHandling: 'greedy',
   });
 
   placesService = new google.maps.places.PlacesService(map);
