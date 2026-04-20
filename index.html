@@ -1322,7 +1322,8 @@ function renderFeedItems(items) {
   
   // FILTER: friends always show (anywhere) + strangers only if nearby
   const filtered = items.filter(item => {
-    const isMe = currentUser && item.userId === currentUser.uid;
+    const myId = currentUser?.uid || betaUserId;
+    const isMe = myId && item.userId === myId;
     if (isMe) return true; // always show own check-ins
     const isFriend = currentUser && userFriends.has(item.userId);
     if (isFriend) return true; // friends show anywhere
