@@ -173,7 +173,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
 .loading-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(245,237,224,0.3);border-top-color:var(--cream);border-radius:50%;animation:spin 0.7s linear infinite;margin-right:6px;}
 @keyframes spin{to{transform:rotate(360deg)}}
-
+@keyframes slidein{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
 /* FAVORITES */
 .fav-star{background:transparent;border:none;cursor:pointer;font-size:20px;color:#C0B4A8;transition:all 0.15s;padding:4px;line-height:1;}
 .fav-star:hover{transform:scale(1.15);}
@@ -635,14 +635,21 @@ let favoriteShopsData = []; // Full data for favorited shops (for favorites list
 let dismissedVerifyBanner = false; // per-session dismissal of email verify banner
 
 // ── Auth state ──
+let friendRequestUnsub = null;
+
 onAuthStateChanged(auth, user => {
   currentUser = user;
   updateProfileBtn();
+  // Unsubscribe old listener if switching users
+  if (friendRequestUnsub) { friendRequestUnsub(); friendRequestUnsub = null; }
+  
   if (user) {
     ensureUserDoc(user);
     loadFavorites(user.uid);
     loadFriends(user.uid);
     loadFriendRequests(user.uid);
+    // Real-time listener for incoming friend requests
+    setupFriendRequestListener(user.uid);
   } else {
     userFavorites.clear();
     favoriteShopsData = [];
@@ -651,6 +658,58 @@ onAuthStateChanged(auth, user => {
     outgoingFriendRequests.clear();
   }
 });
+
+function setupFriendRequestListener(uid) {
+  const seenRequests = new Set(incomingFriendRequests.map(r => r.fromUid));
+  friendRequestUnsub = onSnapshot(collection(db, 'users', uid, 'friendRequests'), snap => {
+    const current = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    // Find NEW requests (not in seenRequests yet)
+    current.forEach(r => {
+      if (!seenRequests.has(r.fromUid)) {
+        seenRequests.add(r.fromUid);
+        // Only notify if we've already loaded the initial set (avoid spam on first login)
+        if (incomingFriendRequests.length || seenRequests.size > 1) {
+          showFriendRequestNotif(r.fromName || 'Someone', r.fromUid);
+        }
+      }
+    });
+    incomingFriendRequests = current;
+    updateFriendBadge();
+  });
+}
+
+function showFriendRequestNotif(fromName, fromUid) {
+  // Custom toast with action
+  const notif = document.createElement('div');
+  notif.style.cssText = `
+    position:fixed;top:70px;right:16px;background:var(--cream);color:var(--esp);
+    padding:14px 16px;border-radius:14px;box-shadow:0 6px 24px rgba(28,15,6,0.2);
+    z-index:9999;max-width:280px;font-family:'DM Sans',sans-serif;
+    border-left:3px solid var(--gold);
+    animation:slidein 0.3s ease;
+  `;
+  notif.innerHTML = `
+    <div style="font-size:13px;font-weight:500;margin-bottom:4px;">👥 New friend request</div>
+    <div style="font-size:12px;color:#8A7A6A;margin-bottom:10px;">${fromName} wants to be friends</div>
+    <div style="display:flex;gap:6px;">
+      <button onclick="handleAcceptRequest('${fromUid}','${fromName.replace(/'/g,'')}'); this.parentElement.parentElement.remove();" style="flex:1;background:var(--gold);color:white;border:none;border-radius:20px;padding:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">Accept</button>
+      <button onclick="this.parentElement.parentElement.remove();" style="background:transparent;border:0.5px solid rgba(28,15,6,0.15);color:#8A7A6A;border-radius:20px;padding:6px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">View later</button>
+    </div>
+  `;
+  document.body.appendChild(notif);
+  // Auto-dismiss after 8 seconds
+  setTimeout(() => { if (notif.parentElement) notif.remove(); }, 8000);
+}
+
+function updateFriendBadge() {
+  // Update profile button with badge count
+  const btn = document.getElementById('tab-profile');
+  if (btn && currentUser) {
+    const name = currentUser.displayName || currentUser.email.split('@')[0];
+    const badge = incomingFriendRequests.length ? ` <span style="background:var(--gold);color:white;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:3px;">${incomingFriendRequests.length}</span>` : '';
+    btn.innerHTML = '◉ ' + name + badge;
+  }
+}
 
 async function ensureUserDoc(user) {
   const ref = doc(db, 'users', user.uid);
@@ -1542,18 +1601,22 @@ window.openCI = function(shopId) {
   const s = shopId ? shops.find(x=>x.id===shopId) : null;
   document.getElementById('ci-title').textContent = s ? `Check in at ${s.name}` : 'Check in';
   document.getElementById('ci-sub').textContent = s ? s.addr : 'Report what you see right now';
-  // Check location and warn if far
+  // Check location — MUST be at shop to check in
   if (s) {
     checkUserLocation(s).then(loc => {
       const subEl = document.getElementById('ci-sub');
+      const submitBtn = document.getElementById('ci-submit-btn');
       if (!subEl) return;
       if (loc.verified) {
         subEl.textContent = s.addr + ' · ✓ You are here';
         subEl.style.color = '#5C7A5F';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
       } else if (loc.distance !== null) {
-        subEl.innerHTML = s.addr + `<br><span style="color:#C8922A;font-size:11px;">⚠ ${loc.distance}m away — unverified check-in (can't report Full)</span>`;
+        subEl.innerHTML = s.addr + `<br><span style="color:#B5511A;font-size:11px;">⚠ You're ${loc.distance}m away — you must be at the shop to check in</span>`;
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.style.opacity = '0.5'; }
       } else {
-        subEl.innerHTML = s.addr + `<br><span style="color:#A09080;font-size:11px;">Location unavailable — unverified check-in</span>`;
+        subEl.innerHTML = s.addr + `<br><span style="color:#B5511A;font-size:11px;">Location unavailable — enable location services and try again</span>`;
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.style.opacity = '0.5'; }
       }
     });
   }
@@ -1751,12 +1814,40 @@ window.submitCI = async function() {
       }
     }
 
-    // Block unverified full check-ins
-    if (selectedOcc === 'full' && !verified) {
-      toast('Must be at the shop to report Full — helps keep it accurate!');
+    // Block ALL unverified check-ins (must be at the shop)
+    if (!verified) {
+      toast('You need to be at the shop to check in — helps keep it accurate! ☕');
       btn.innerHTML = 'Submit check-in';
       btn.disabled = false;
       return;
+    }
+
+    // Rate limit: 30 min cooldown per user per shop
+    if (shop) {
+      try {
+        const recentQ = query(
+          collection(db, 'checkins'),
+          where('userId', '==', currentUser.uid),
+          where('shopId', '==', shop.id),
+          limit(5)
+        );
+        const recentSnap = await getDocs(recentQ);
+        const thirtyMinAgo = Date.now() - (30 * 60 * 1000);
+        const recent = recentSnap.docs.find(d => {
+          const data = d.data();
+          const t = data.createdAt?.toMillis?.() || 0;
+          return t > thirtyMinAgo;
+        });
+        if (recent) {
+          const data = recent.data();
+          const t = data.createdAt?.toMillis?.() || 0;
+          const minsLeft = Math.ceil((30 * 60 * 1000 - (Date.now() - t)) / 60000);
+          toast(`You just checked in here — try again in ${minsLeft} min ⏱`);
+          btn.innerHTML = 'Submit check-in';
+          btn.disabled = false;
+          return;
+        }
+      } catch(e) { console.log('rate check error', e); }
     }
 
     const checkinData = {
