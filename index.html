@@ -625,9 +625,11 @@ onAuthStateChanged(auth, user => {
   if (user) {
     ensureUserDoc(user);
     loadFavorites(user.uid);
+    loadFriends(user.uid);
   } else {
     userFavorites.clear();
     favoriteShopsData = [];
+    userFriends.clear();
   }
 });
 
@@ -914,7 +916,33 @@ function dropMarker(shop) {
   marker.addListener('click', ()=>showShop(shop.id));
   markers.push(marker);
 }
+// ── Friends + nearby helpers ──
+let userFriends = new Set(); // UIDs of current user's friends
 
+async function loadFriends(uid) {
+  if (!uid) { userFriends.clear(); return; }
+  try {
+    const snap = await getDocs(collection(db, 'users', uid, 'friends'));
+    userFriends.clear();
+    snap.docs.forEach(d => userFriends.add(d.id));
+  } catch(e) { console.log('friends load error', e); }
+}
+
+function getMapCenterCoords() {
+  if (!map) return null;
+  const c = map.getCenter();
+  return { lat: c.lat(), lng: c.lng() };
+}
+
+function isCheckinNearby(checkin) {
+  const center = getMapCenterCoords();
+  if (!center || !checkin.shopId) return false;
+  // Find shop in current shops array
+  const shop = shops.find(s => s.id === checkin.shopId);
+  if (!shop) return false;
+  const dist = getDistanceMeters(center.lat, center.lng, shop.lat, shop.lng);
+  return dist <= 3200; // ~2 miles
+}
 // ── Live feed from Firestore (simple query, no composite index) ──
 function listenFeed() {
   if (feedUnsub) feedUnsub();
@@ -954,15 +982,30 @@ function listenFeed() {
 
 function renderFeedItems(items) {
   const el = document.getElementById('feed-items');
-  if (!items.length) {
-    el.innerHTML = '<div class="empty-state">No check-ins yet in this area.<br>Be the first to check in!</div>';
+  
+  // FILTER: friends always show (anywhere) + strangers only if nearby
+  const filtered = items.filter(item => {
+    const isMe = currentUser && item.userId === currentUser.uid;
+    if (isMe) return true; // always show own check-ins
+    const isFriend = currentUser && userFriends.has(item.userId);
+    if (isFriend) return true; // friends show anywhere
+    return isCheckinNearby(item); // strangers only if nearby
+  });
+  
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty-state">No activity nearby yet.<br>Move the map or check in to start the feed.</div>';
     return;
   }
-  el.innerHTML = items.map(item => {
+  
+  el.innerHTML = filtered.map(item => {
     const isAnon = item.anonymous;
-    const displayName = isAnon ? 'anonymous' : (item.userDisplayName || 'someone');
-    const initials = isAnon ? '?' : displayName.slice(0,2).toUpperCase();
-    const color = isAnon ? '#8A7A6A' : stringToColor(item.userId || 'x');
+    const isMe = currentUser && item.userId === currentUser.uid;
+    const isFriend = currentUser && userFriends.has(item.userId);
+    // STRANGERS get anonymized names
+    const showRealName = isAnon ? false : (isMe || isFriend);
+    const displayName = isAnon ? 'anonymous' : (showRealName ? (item.userDisplayName || 'someone') : 'a user');
+    const initials = isAnon || !showRealName ? '?' : displayName.slice(0,2).toUpperCase();
+    const color = isAnon || !showRealName ? '#8A7A6A' : stringToColor(item.userId || 'x');
     const occC = occColor(item.occ);
     const shopName = item.shopName || 'a coffee shop';
     const shopId = item.shopId;
