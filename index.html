@@ -545,7 +545,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
   <button onclick="openBetaNameModal()" style="background:transparent;color:var(--cream);border:1px solid rgba(245,237,224,0.25);border-radius:50px;padding:16px 36px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:400;cursor:pointer;min-width:260px;">
     Explore as beta tester
   </button>
-  <div style="color:rgba(245,237,224,0.4);font-size:11px;margin-top:28px;">Beta data resets at end of session</div>
+  <div style="color:rgba(245,237,224,0.55);font-size:13px;margin-top:24px;">
+    Already have an account? <span onclick="welcomeSignin()" style="color:var(--gold);cursor:pointer;text-decoration:underline;font-weight:500;">Sign in</span>
+  </div>
+  <div style="color:rgba(245,237,224,0.4);font-size:11px;margin-top:16px;">Beta data resets at end of session</div>
 </div>
 
 <!-- BETA NAME MODAL -->
@@ -691,6 +694,15 @@ let betaUserId = null; // fake UID for this session
 window.welcomeSignup = function() {
   document.getElementById('welcome-screen').style.display = 'none';
   sessionStorage.setItem('stoa_welcomed', '1');
+  showPanel('auth');
+  if (window.innerWidth <= 768) openListPanel();
+};
+window.welcomeSignin = function() {
+  document.getElementById('welcome-screen').style.display = 'none';
+  sessionStorage.setItem('stoa_welcomed', '1');
+  // Flip auth to sign-in mode
+  authMode = 'signup'; // set to opposite so toggleAuthMode flips it correctly
+  toggleAuthMode();
   showPanel('auth');
   if (window.innerWidth <= 768) openListPanel();
 };
