@@ -420,6 +420,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     <button class="mobile-menu-item" onclick="mobileNav('feed')">◎ Activity</button>
     <button class="mobile-menu-item" onclick="mobileNav('favorites')">★ Favorites</button>
     <button class="mobile-menu-item" onclick="mobileNav('profile')">◉ Sign in / Profile</button>
+    <button class="mobile-menu-item" onclick="mobileNav('friends')">⚇ Friends</button>
     <button class="mobile-menu-item gold" onclick="mobileNav('add')">+ Add shop</button>
   </div>
 
@@ -483,7 +484,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
         <div id="profile-hdr-area"></div>
         <div class="panel-scroll" id="profile-body"></div>
       </div>
-
+<!-- FRIENDS VIEW -->
+      <div class="panel-view" id="view-friends">
+        <div class="feed-hdr">
+          <div class="back-link" onclick="showMyProfile()">← Back to profile</div>
+          <div class="feed-hdr-title">Friends</div>
+          <div style="font-size:11px;color:#8A7A6A;margin-top:3px;">Connect with people you know on STOA</div>
+        </div>
+        <div style="padding:12px 18px;background:white;border-bottom:1px solid rgba(28,15,6,0.06);">
+          <div style="position:relative;">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#A09080;font-size:14px;">⌕</span>
+            <input type="text" id="friend-search-input" placeholder="Search by name or email…" oninput="handleFriendSearch(this.value)" style="width:100%;background:var(--cream);border:0.5px solid rgba(28,15,6,0.12);border-radius:50px;padding:9px 14px 9px 34px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--esp);outline:none;">
+          </div>
+        </div>
+        <div class="panel-scroll" id="friends-body">
+          <div class="empty-state">Loading…</div>
+        </div>
+      </div>
       <!-- AUTH VIEW -->
       <div class="panel-view" id="view-auth">
         <div class="auth-panel">
@@ -1430,7 +1447,12 @@ async function renderProfile(uid, name, isMe) {
       <div class="profile-av" style="background:${color};">${initials}</div>
       <div class="profile-name">${name}${showFounder?'<span class="founder-tag">Founder</span>':''}</div>
       <div class="profile-handle">@${isMe?(currentUser.displayName||currentUser.email.split('@')[0]).toLowerCase().replace(/\s/g,'_'):name.toLowerCase().replace(/\s/g,'_')}</div>
-      ${isMe?`<button onclick="signOutUser()" style="margin-top:8px;background:transparent;border:0.5px solid rgba(28,15,6,0.15);border-radius:20px;padding:5px 14px;font-size:11px;cursor:pointer;color:#8A7A6A;">Sign out</button>`:''}
+      ${isMe?`<div style="display:flex;gap:8px;justify-content:center;margin-top:8px;">
+        <button onclick="showFriends()" style="background:var(--gold);border:none;color:white;border-radius:20px;padding:5px 14px;font-size:11px;cursor:pointer;font-weight:500;">
+          Friends${incomingFriendRequests.length?` <span style="background:white;color:var(--gold);padding:1px 6px;border-radius:10px;margin-left:3px;">${incomingFriendRequests.length}</span>`:''}
+        </button>
+        <button onclick="signOutUser()" style="background:transparent;border:0.5px solid rgba(28,15,6,0.15);border-radius:20px;padding:5px 14px;font-size:11px;cursor:pointer;color:#8A7A6A;">Sign out</button>
+      </div>`:''}
       <div class="profile-stats">
         <div class="p-stat"><div class="p-val">${totalCheckins}</div><div class="p-key">check-ins</div></div>
         <div class="p-stat"><div class="p-val">${points}</div><div class="p-key">points</div></div>
@@ -1953,6 +1975,152 @@ function occColor(l){ return l==='empty'?'#5C7A5F':l==='moderate'?'#C8922A':'#B5
 function occPct(l){ return l==='empty'?Math.floor(Math.random()*22+5):l==='moderate'?Math.floor(Math.random()*28+42):Math.floor(Math.random()*13+82); }
 function stringToColor(str){ let h=0; for(let i=0;i<str.length;i++){h=str.charCodeAt(i)+((h<<5)-h);} const colors=['#C8922A','#5C7A5F','#B5511A','#6A7FAA','#8A6AAA','#6A8A7A','#AA6A6A']; return colors[Math.abs(h)%colors.length]; }
 function timeAgo(date){ const s=Math.floor((new Date()-date)/1000); if(s<60) return 'just now'; if(s<3600) return Math.floor(s/60)+' min ago'; if(s<86400) return Math.floor(s/3600)+' hr ago'; return Math.floor(s/86400)+' days ago'; }
+// ── Friends UI ──
+let friendSearchTimeout = null;
+
+window.showFriends = async function() {
+  if (!currentUser) { showPanel('auth'); return; }
+  // Reload fresh data
+  await loadFriends(currentUser.uid);
+  await loadFriendRequests(currentUser.uid);
+  showPanel('friends');
+  setActiveTab(null);
+  renderFriendsBody();
+  // Clear search input
+  const si = document.getElementById('friend-search-input');
+  if (si) si.value = '';
+};
+
+function renderFriendsBody() {
+  const el = document.getElementById('friends-body');
+  if (!el) return;
+  
+  let html = '';
+  
+  // Pending requests section
+  if (incomingFriendRequests.length) {
+    html += `<div class="sec-label">Pending requests (${incomingFriendRequests.length})</div>`;
+    html += incomingFriendRequests.map(r => {
+      const initials = (r.fromName || '?').slice(0,2).toUpperCase();
+      const color = stringToColor(r.fromUid);
+      return `<div class="nearby-row" style="align-items:center;">
+        <div class="av" style="width:36px;height:36px;background:${color};font-size:13px;">${initials}</div>
+        <div class="nearby-info">
+          <div class="nearby-name">${r.fromName || 'Someone'}</div>
+          <div class="nearby-addr">wants to be your friend</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="handleAcceptRequest('${r.fromUid}','${(r.fromName||'').replace(/'/g,'')}')" style="background:var(--gold);color:white;border:none;border-radius:20px;padding:6px 12px;font-size:11px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">Accept</button>
+          <button onclick="handleRejectRequest('${r.fromUid}')" style="background:transparent;color:#8A7A6A;border:0.5px solid rgba(28,15,6,0.15);border-radius:20px;padding:6px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Decline</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  
+  // Current friends
+  html += `<div class="sec-label">Your friends (${userFriends.size})</div>`;
+  if (!userFriends.size) {
+    html += `<div class="empty-state" style="padding:24px 20px;">No friends yet.<br>Search above to find people you know.</div>`;
+  } else {
+    // We need to fetch friend details
+    html += '<div id="friends-list-area"><div class="empty-state" style="padding:16px;">Loading friends…</div></div>';
+  }
+  
+  el.innerHTML = html;
+  
+  // Load friend details if we have friends
+  if (userFriends.size) loadFriendsList();
+}
+
+async function loadFriendsList() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDocs(collection(db, 'users', currentUser.uid, 'friends'));
+    const friends = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    const el = document.getElementById('friends-list-area');
+    if (!el) return;
+    el.innerHTML = friends.map(f => {
+      const initials = (f.displayName || '?').slice(0,2).toUpperCase();
+      const color = stringToColor(f.uid || f.id);
+      return `<div class="nearby-row" onclick="showUserProfile('${f.uid||f.id}','${(f.displayName||'').replace(/'/g,'')}')">
+        <div class="av" style="width:36px;height:36px;background:${color};font-size:13px;">${initials}</div>
+        <div class="nearby-info">
+          <div class="nearby-name">${f.displayName || 'Friend'}</div>
+          <div class="nearby-addr">Tap to view profile</div>
+        </div>
+        <button onclick="event.stopPropagation();handleRemoveFriend('${f.uid||f.id}','${(f.displayName||'').replace(/'/g,'')}')" style="background:transparent;color:#C0B4A8;border:none;font-size:16px;cursor:pointer;padding:4px 8px;">×</button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    console.log('load friends list error', e);
+  }
+}
+
+window.handleFriendSearch = function(value) {
+  clearTimeout(friendSearchTimeout);
+  friendSearchTimeout = setTimeout(async () => {
+    const el = document.getElementById('friends-body');
+    if (!el) return;
+    if (!value || value.length < 2) {
+      renderFriendsBody(); // show default view
+      return;
+    }
+    el.innerHTML = '<div class="empty-state" style="padding:20px;">Searching…</div>';
+    const results = await searchUsers(value);
+    if (!results.length) {
+      el.innerHTML = `<div class="empty-state" style="padding:20px;">No users found for "${value}"<br><br>Make sure your friends have signed up ☕</div>`;
+      return;
+    }
+    el.innerHTML = `<div class="sec-label">Search results (${results.length})</div>` + 
+      results.map(u => {
+        const initials = (u.displayName || '?').slice(0,2).toUpperCase();
+        const color = stringToColor(u.id);
+        const isFriend = userFriends.has(u.id);
+        const isPending = outgoingFriendRequests.has(u.id);
+        let btnHtml;
+        if (isFriend) {
+          btnHtml = `<div style="font-size:11px;color:var(--sage);padding:6px 10px;">✓ Friends</div>`;
+        } else if (isPending) {
+          btnHtml = `<div style="font-size:11px;color:#A09080;padding:6px 10px;">Request sent</div>`;
+        } else {
+          btnHtml = `<button onclick="handleSendRequest('${u.id}','${(u.displayName||'').replace(/'/g,'')}')" style="background:var(--gold);color:white;border:none;border-radius:20px;padding:6px 12px;font-size:11px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">+ Add friend</button>`;
+        }
+        return `<div class="nearby-row">
+          <div class="av" style="width:36px;height:36px;background:${color};font-size:13px;">${initials}</div>
+          <div class="nearby-info">
+            <div class="nearby-name">${u.displayName || 'User'}</div>
+            <div class="nearby-addr">${u.email || ''}</div>
+          </div>
+          ${btnHtml}
+        </div>`;
+      }).join('');
+  }, 300);
+};
+
+window.handleSendRequest = async function(uid, name) {
+  const success = await sendFriendRequest(uid, name);
+  if (success) {
+    // Re-run current search to show "Request sent"
+    const input = document.getElementById('friend-search-input');
+    if (input && input.value) handleFriendSearch(input.value);
+  }
+};
+
+window.handleAcceptRequest = async function(fromUid, fromName) {
+  const success = await acceptFriendRequest(fromUid, fromName);
+  if (success) renderFriendsBody();
+};
+
+window.handleRejectRequest = async function(fromUid) {
+  const success = await rejectFriendRequest(fromUid);
+  if (success) renderFriendsBody();
+};
+
+window.handleRemoveFriend = async function(friendUid, friendName) {
+  if (!confirm(`Remove ${friendName} from your friends?`)) return;
+  const success = await removeFriend(friendUid);
+  if (success) renderFriendsBody();
+};
 window.showSignupGate = function() {
   document.getElementById('gate-overlay').classList.add('open');
 };
@@ -2000,6 +2168,7 @@ window.mobileNav = function(dest) {
     else if (dest === 'feed') showFeed();
     else if (dest === 'favorites') showFavorites();
     else if (dest === 'profile') showMyProfile();
+    else if (dest === 'friends') showFriends();
     else if (dest === 'add') openAdd();
   }, 100);
 };
