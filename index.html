@@ -556,6 +556,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
 <div class="toast" id="toast"></div>
 
+<!-- SIGNUP GATE MODAL -->
+<div class="overlay" id="gate-overlay" onclick="closeGateOutside(event)">
+  <div class="sheet" style="text-align:center;padding:32px 28px 36px;">
+    <div class="handle"></div>
+    <div style="font-size:40px;margin-bottom:12px;">☕</div>
+    <div class="sheet-title" style="margin-bottom:10px;">Sign up to keep exploring</div>
+    <div style="font-size:13px;color:#8A7A6A;line-height:1.6;margin-bottom:24px;">
+      You've checked out one spot. Sign up free to see all of NYC's coffee shops, check in, and save your favorites.
+    </div>
+    <button class="btn-primary" style="width:100%;padding:14px;font-size:14px;margin-bottom:10px;" onclick="gateToSignup()">
+      Sign up — it's free
+    </button>
+    <button onclick="closeGate()" style="background:transparent;border:none;color:#8A7A6A;font-size:12px;cursor:pointer;padding:8px;font-family:'DM Sans',sans-serif;">
+      Maybe later
+    </button>
+  </div>
+</div>
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
@@ -1002,7 +1019,17 @@ function isShopOpenNow(openingHours) {
 }
 
 // ── Show shop ──
+let guestShopViews = 0;
 window.showShop = function(id) {
+  // Guest gate — let them see 1 shop, then prompt signup
+  if (!currentUser) {
+    if (guestShopViews >= 1) {
+      // Already viewed one — show signup gate
+      showSignupGate();
+      return;
+    }
+    guestShopViews++;
+  }
   currentShopId = id;
   const s = shops.find(x=>x.id===id);
   if (!s) return;
@@ -1754,6 +1781,20 @@ function occColor(l){ return l==='empty'?'#5C7A5F':l==='moderate'?'#C8922A':'#B5
 function occPct(l){ return l==='empty'?Math.floor(Math.random()*22+5):l==='moderate'?Math.floor(Math.random()*28+42):Math.floor(Math.random()*13+82); }
 function stringToColor(str){ let h=0; for(let i=0;i<str.length;i++){h=str.charCodeAt(i)+((h<<5)-h);} const colors=['#C8922A','#5C7A5F','#B5511A','#6A7FAA','#8A6AAA','#6A8A7A','#AA6A6A']; return colors[Math.abs(h)%colors.length]; }
 function timeAgo(date){ const s=Math.floor((new Date()-date)/1000); if(s<60) return 'just now'; if(s<3600) return Math.floor(s/60)+' min ago'; if(s<86400) return Math.floor(s/3600)+' hr ago'; return Math.floor(s/86400)+' days ago'; }
+window.showSignupGate = function() {
+  document.getElementById('gate-overlay').classList.add('open');
+};
+window.closeGate = function() {
+  document.getElementById('gate-overlay').classList.remove('open');
+};
+window.closeGateOutside = function(e) {
+  if (e.target === document.getElementById('gate-overlay')) closeGate();
+};
+window.gateToSignup = function() {
+  closeGate();
+  showPanel('auth');
+  if (window.innerWidth <= 768) openListPanel();
+};
 window.toast = function(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); };
 // ── Mobile menu + bottom sheet ──
 let sheetState = 'low'; // low | mid | high
