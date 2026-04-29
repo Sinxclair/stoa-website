@@ -2545,6 +2545,11 @@ function updateCarouselTitle() {
 function setupMapResize() {
   const handle = document.getElementById('map-resize-handle');
   const mapWrap = document.querySelector('.map-wrap');
+  const MIN_PX = 160;
+
+function getMaxPx() {
+  return Math.round(window.innerHeight * 0.8);
+}
   if (!handle || !mapWrap) return;
   if (handle.dataset.bound) return; // idempotent — safe to call again
   handle.dataset.bound = '1';
