@@ -288,40 +288,40 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
     overflow-y:auto;
     overflow-x:hidden;
     -webkit-overflow-scrolling:touch;
-    padding-bottom:70px; /* space for bottom nav */
+    padding-bottom:60px; /* space for bottom nav */
   }
 
   /* MAP — three sizes via toggle button */
   .map-wrap{
     position:relative !important;
     width:100% !important;
-    height:30vh !important;
+    flex:1 1 auto !important;
     min-height:0 !important;
-    max-height:30vh !important;
-    flex-shrink:0;
     border-radius:0 0 16px 16px;
     overflow:hidden;
-    transition:height 0.3s ease, max-height 0.3s ease;
+    transition:flex 0.3s ease, height 0.3s ease, max-height 0.3s ease;
   }
   body .map-wrap.size-medium,
   .map-wrap.size-medium{
+    flex:0 0 auto !important;
     height:60vh !important;
     max-height:60vh !important;
     min-height:60vh !important;
   }
   body .map-wrap.size-large,
   .map-wrap.size-large{
+    flex:0 0 auto !important;
     height:80vh !important;
     max-height:80vh !important;
     min-height:80vh !important;
   }
 
-  /* CAROUSEL on mobile — always visible, fills space below map */
+  /* CAROUSEL on mobile — always visible, hugs content */
   body.home-mode .near-you-section{
     display:block !important;
-    flex:1 1 auto !important;
-    min-height:280px !important;
-    padding:14px 0 12px !important;
+    flex:0 0 auto !important;
+    min-height:0 !important;
+    padding:14px 0 8px !important;
   }
   body.home-mode.size-large-active .near-you-section,
   body.home-mode.size-medium-active .near-you-section{
