@@ -295,9 +295,9 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
   .map-wrap{
     position:relative !important;
     width:100% !important;
-    height:38vh !important;
+    height:30vh !important;
     min-height:0 !important;
-    max-height:38vh !important;
+    max-height:30vh !important;
     flex-shrink:0;
     border-radius:0 0 16px 16px;
     overflow:hidden;
@@ -331,7 +331,8 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
   .near-you-header{padding:0 16px 10px !important;}
   .near-you-title{font-size:17px !important;}
   .near-you-card{width:170px !important;}
-  .near-you-card-img{height:90px !important;}
+  .near-you-card-img{display:none !important;}
+  .near-you-card-body{padding:10px 11px 11px !important;}
 
   /* MAP TOGGLE BUTTON — top of map, always visible */
   .map-toggle-btn{
@@ -540,7 +541,7 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
     <div class="near-you-section" id="near-you-section">
       <div class="near-you-header">
         <div class="near-you-title" id="near-you-title">Near you now</div>
-        <div class="near-you-link" onclick="showNearby()">See all →</div>
+        <div class="near-you-link" onclick="if(window.innerWidth<=768 && window.mobileNavBottom){mobileNavBottom('list')}else{showNearby()}">See all →</div>
       </div>
       <div class="near-you-scroll" id="near-you-scroll"></div>
     </div>
