@@ -231,6 +231,12 @@ body.list-mode .map-resize-handle,
 body.list-mode .near-you-section{display:none !important;}
 body.list-mode .panel{flex:1 !important;}
 
+/* HOME MODE — map + carousel only. Hide the long Nearby list (it lives in /list now) */
+body.home-mode #view-nearby{display:none !important;}
+body.home-mode .panel{flex:0 0 auto !important; min-height:0 !important;}
+/* When dragging the handle, freeze body scroll so the page doesn't fight us */
+body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
+
 /* ═══════════════════════════════════════════
    MOBILE — overhauled responsive layout
    ═══════════════════════════════════════════ */
@@ -239,10 +245,11 @@ body.list-mode .panel{flex:1 !important;}
   .bottom-nav{display:block;}
 
   /* Thin top bar */
-  .topbar{padding:10px 14px;gap:8px;}
-  .logo{font-size:22px;}
+  .topbar{padding:7px 12px;gap:8px;min-height:44px;}
+  .logo{font-size:19px;}
   .search-wrap{display:none;}
   .tb-actions{display:none;}
+  .mobile-hamburger{width:32px !important; height:32px !important; font-size:16px !important;}
 
   /* Hamburger button */
   .mobile-hamburger{
@@ -409,17 +416,19 @@ body.list-mode .panel{flex:1 !important;}
   .locate-btn{bottom:12px;right:12px;width:42px;height:42px;font-size:18px;}
 
   /* Shop detail / auth / friends — full screen overlays on mobile (these are deep-link views) */
+  /* Sit BELOW the topbar so the user can still see "STOA" + hamburger and isn't trapped */
   .panel-view#view-shop,
   .panel-view#view-auth,
   .panel-view#view-friends{
     position:fixed !important;
-    top:0 !important;
+    top:44px !important;          /* match topbar min-height */
     left:0 !important;
     right:0 !important;
-    bottom:0 !important;
+    bottom:64px !important;       /* leave room for the bottom nav */
     z-index:80;
     background:var(--cream);
     overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
   }
   /* Profile, Feed, Favorites — flow inline like Nearby (so bottom nav works) */
   .panel-view#view-profile,
@@ -1150,7 +1159,50 @@ function searchNearby(center) {
     loadOccupancyFromFirestore();
     renderNearbyList();
     renderNearYouCarousel();
+    fetchCarouselPhotos();   // lazy-load real Google photos for the cards
     listenFeed();
+  });
+}
+
+// Lazy-load one photo per shop for the carousel. nearbySearch usually returns
+// no photos[] — getDetails does. We throttle to the first ~12 cards so we don't
+// burn through Places API quota on every map move.
+function fetchCarouselPhotos() {
+  if (!placesService || !shops.length) return;
+  const sorted = [...shops].sort((a, b) => {
+    if (b.reports !== a.reports) return b.reports - a.reports;
+    const o = { empty: 0, moderate: 1, full: 2 };
+    return (o[a.occ] || 1) - (o[b.occ] || 1);
+  }).slice(0, 12);
+
+  let pending = 0;
+  let scheduled = false;
+  const scheduleRerender = () => {
+    if (scheduled) return;
+    scheduled = true;
+    setTimeout(() => { scheduled = false; renderNearYouCarousel(); }, 250);
+  };
+
+  sorted.forEach((s, i) => {
+    if (s.photoUrl || s.isUser || s._photoFetched) return;
+    s._photoFetched = true;
+    // Stagger requests so we don't all fire at once
+    setTimeout(() => {
+      try {
+        placesService.getDetails(
+          { placeId: s.id, fields: ['photos'] },
+          (place, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK
+                && place && place.photos && place.photos.length) {
+              try {
+                s.photoUrl = place.photos[0].getUrl({ maxWidth: 280, maxHeight: 160 });
+                scheduleRerender();
+              } catch(_) {}
+            }
+          }
+        );
+      } catch(_) {}
+    }, i * 120);
   });
 }
 
@@ -1649,16 +1701,19 @@ function renderNearYouCarousel() {
     const badgeBg = s.occ === 'empty' ? '#5C7A5F' : s.occ === 'moderate' ? '#C8922A' : '#B5511A';
     const cap = s.occ.charAt(0).toUpperCase() + s.occ.slice(1);
     const checkins = s.reports || 0;
-    // Real Google photo if we have it, gradient otherwise
+    // Real Google photo if we have it, gradient otherwise.
+    // Use an <img> so we can listen for onerror (e.g. Google referrer-blocked) and gracefully fall back.
     const fallback = gradients[Math.abs(s.name.charCodeAt(0)) % gradients.length];
-    const bgStyle = s.photoUrl
-      ? `url("${s.photoUrl.replace(/"/g,'%22')}") center/cover, ${fallback}`
-      : fallback;
+    const safeUrl = s.photoUrl ? s.photoUrl.replace(/"/g,'%22') : '';
+    const imgTag = s.photoUrl
+      ? `<img src="${safeUrl}" alt="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" onerror="this.style.display='none';" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />`
+      : '';
     // Truncate address — first part only
     const shortAddr = s.addr ? s.addr.split(',')[0] : '';
 
     return `<div class="near-you-card" onclick="showShop('${s.id}')">
-      <div class="near-you-card-img" style="background:${bgStyle};">
+      <div class="near-you-card-img" style="background:${fallback};">
+        ${imgTag}
         <div class="near-you-card-badge" style="background:${badgeBg};">${pct}%</div>
       </div>
       <div class="near-you-card-body">
@@ -2432,8 +2487,9 @@ window.mobileNavBottom = function(dest) {
   if (btn) btn.classList.add('active');
   const main = document.querySelector('.main');
   if (main && window.innerWidth <= 768) main.scrollTop = 0;
-  // List mode = full-screen list, no map, no carousel
+  // Mode classes drive what's visible
   document.body.classList.toggle('list-mode', dest === 'list');
+  document.body.classList.toggle('home-mode', dest === 'home');
   // Show carousel on Home only
   const carousel = document.getElementById('near-you-section');
   if (carousel && window.innerWidth <= 768) {
@@ -2448,6 +2504,10 @@ window.mobileNavBottom = function(dest) {
     setTimeout(() => window.google.maps.event.trigger(window.map, 'resize'), 200);
   }
 };
+// Default to Home mode on mobile so the carousel-only view shows on first load
+if (window.innerWidth <= 768) {
+  document.body.classList.add('home-mode');
+}
 
 // Update carousel title based on map state
 function updateCarouselTitle() {
@@ -2486,6 +2546,10 @@ function setupMapResize() {
     }
   };
 
+  // Remember the .main scroller's scroll position so we can lock it during drag
+  const main = document.querySelector('.main');
+  let savedScroll = 0;
+
   const onDown = (e) => {
     if (window.innerWidth > 768) return;
     dragging = true;
@@ -2496,12 +2560,19 @@ function setupMapResize() {
     startH = mapWrap.getBoundingClientRect().height;
     mapWrap.classList.add('dragging');
     handle.classList.add('dragging');
+    // FREEZE the body + main scroller so the page can't scroll under us
+    document.body.classList.add('dragging-handle');
+    if (main) {
+      savedScroll = main.scrollTop;
+      main.style.overflow = 'hidden';
+    }
     // Capture pointer so we keep getting events even off-element
     if (e.pointerId !== undefined && handle.setPointerCapture) {
       try { handle.setPointerCapture(e.pointerId); } catch(_) {}
     }
     // Prevent text selection / page scroll while dragging
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation();
   };
 
   const onMove = (e) => {
@@ -2513,7 +2584,8 @@ function setupMapResize() {
     h = Math.max(MIN_PX, Math.min(getMaxPx(), h));
     // Drive height via CSS var so it composes with the @media rule
     mapWrap.style.setProperty('--map-h', h + 'px');
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation();
   };
 
   const onUp = (e) => {
@@ -2521,6 +2593,12 @@ function setupMapResize() {
     dragging = false;
     mapWrap.classList.remove('dragging');
     handle.classList.remove('dragging');
+    // UNFREEZE
+    document.body.classList.remove('dragging-handle');
+    if (main) {
+      main.style.overflow = '';
+      main.scrollTop = savedScroll;
+    }
     // Tap (no real movement) → toggle between compact and expanded
     if (!moved) {
       const cur = mapWrap.getBoundingClientRect().height;
