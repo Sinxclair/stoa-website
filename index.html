@@ -198,32 +198,38 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 /* ═══════════════════════════════════════════
    NEW: NEAR YOU NOW CAROUSEL
    ═══════════════════════════════════════════ */
-.near-you-section{display:none;background:var(--cream);padding:14px 0 10px;flex-shrink:0;}
-.near-you-header{display:flex;justify-content:space-between;align-items:center;padding:0 16px 10px;}
-.near-you-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--esp);}
-.near-you-link{font-size:12px;color:var(--gold);cursor:pointer;font-weight:500;}
-.near-you-scroll{display:flex;gap:12px;overflow-x:auto;padding:0 16px 8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.near-you-section{display:none;background:var(--cream);padding:10px 0 8px;flex-shrink:0;}
+.near-you-header{display:flex;justify-content:space-between;align-items:center;padding:0 16px 8px;}
+.near-you-title{font-family:'DM Serif Display',serif;font-size:15px;color:var(--esp);}
+.near-you-link{font-size:11px;color:var(--gold);cursor:pointer;font-weight:500;}
+.near-you-scroll{display:flex;gap:10px;overflow-x:auto;padding:0 16px 6px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x;overscroll-behavior-x:contain;}
 .near-you-scroll::-webkit-scrollbar{display:none;}
-.near-you-card{flex-shrink:0;width:200px;border-radius:14px;overflow:hidden;background:white;box-shadow:0 2px 10px rgba(28,15,6,0.08);cursor:pointer;scroll-snap-align:start;transition:transform 0.15s;}
+.near-you-card{flex-shrink:0;width:156px;border-radius:12px;overflow:hidden;background:white;box-shadow:0 2px 8px rgba(28,15,6,0.07);cursor:pointer;scroll-snap-align:start;transition:transform 0.15s;}
 .near-you-card:active{transform:scale(0.97);}
-.near-you-card-img{height:90px;background:var(--warm);position:relative;background-size:cover;background-position:center;}
-.near-you-card-badge{position:absolute;top:8px;right:8px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;color:white;}
-.near-you-card-body{padding:10px 12px 12px;}
-.near-you-card-name{font-size:13px;font-weight:500;color:var(--esp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
-.near-you-card-addr{font-size:10px;color:#8A7A6A;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.near-you-card-row{display:flex;justify-content:space-between;align-items:center;margin-top:7px;gap:6px;}
-.near-you-card-meta{font-size:10px;color:#8A7A6A;display:flex;align-items:center;gap:3px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.near-you-card-pill{font-size:9px;font-weight:500;padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.near-you-card-img{height:72px;background:var(--warm);position:relative;background-size:cover;background-position:center;}
+.near-you-card-badge{position:absolute;top:6px;right:6px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;color:white;}
+.near-you-card-body{padding:8px 10px 10px;}
+.near-you-card-name{font-size:12px;font-weight:500;color:var(--esp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
+.near-you-card-addr{font-size:9px;color:#8A7A6A;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.near-you-card-row{display:flex;justify-content:space-between;align-items:center;margin-top:5px;gap:5px;}
+.near-you-card-meta{font-size:9px;color:#8A7A6A;display:flex;align-items:center;gap:3px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.near-you-card-pill{font-size:9px;font-weight:500;padding:2px 6px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
 
 /* ═══════════════════════════════════════════
    NEW: BOTTOM NAV BAR (mobile only)
    ═══════════════════════════════════════════ */
 .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid rgba(28,15,6,0.08);z-index:60;padding:6px 0 calc(6px + env(safe-area-inset-bottom));}
 .bottom-nav-inner{display:flex;justify-content:space-around;align-items:center;}
-.bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:4px 12px;font-family:'DM Sans',sans-serif;color:#A09080;transition:color 0.15s;}
+.bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:4px 8px;font-family:'DM Sans',sans-serif;color:#A09080;transition:color 0.15s;flex:1;min-width:0;}
 .bottom-nav-item.active{color:var(--esp);}
-.bottom-nav-item .nav-icon{font-size:20px;}
+.bottom-nav-item .nav-icon{font-size:20px;line-height:1;}
 .bottom-nav-item .nav-label{font-size:10px;font-weight:500;}
+
+/* LIST MODE — when "List" tab active, hide map+carousel, give list full screen */
+body.list-mode .map-wrap,
+body.list-mode .map-resize-handle,
+body.list-mode .near-you-section{display:none !important;}
+body.list-mode .panel{flex:1 !important;}
 
 /* ═══════════════════════════════════════════
    MOBILE — overhauled responsive layout
@@ -275,40 +281,53 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     padding-bottom:70px; /* space for bottom nav */
   }
 
-  /* MAP — compact, drag handle adjusts height */
+  /* MAP — compact, drag handle adjusts height. Use --map-h CSS var so JS drag updates it live. */
   .map-wrap{
     position:relative !important;
     width:100% !important;
-    height:38vh !important;
-    min-height:220px;
+    height:var(--map-h, 38vh) !important;
+    min-height:160px;
     flex-shrink:0;
     border-radius:0 0 16px 16px;
     overflow:hidden;
+    transition:height 0.15s ease;
   }
+  /* When user is actively dragging, kill transition so movement feels 1:1 */
+  .map-wrap.dragging{transition:none !important;}
   .map-wrap.expanded{
     height:65vh !important;
   }
-  
-  /* DRAG HANDLE between map and content */
+
+  /* DRAG HANDLE between map and content — bigger hit area, more obvious */
   .map-resize-handle{
     display:flex;
     align-items:center;
     justify-content:center;
-    height:24px;
+    height:34px;
     background:var(--cream);
-    cursor:pointer;
+    cursor:grab;
     flex-shrink:0;
     position:relative;
-    z-index:5;
-    margin-top:-10px;
-    border-radius:16px 16px 0 0;
+    z-index:15;
+    margin-top:-14px;
+    border-radius:18px 18px 0 0;
+    touch-action:none;        /* CRITICAL: stop browser from stealing the touch as a scroll */
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent;
   }
+  .map-resize-handle:active{cursor:grabbing;}
   .map-resize-handle::before{
     content:'';
-    width:42px;
-    height:5px;
-    border-radius:3px;
+    width:52px;
+    height:6px;
+    border-radius:4px;
     background:var(--gold);
+    box-shadow:0 1px 3px rgba(28,15,6,0.18);
+  }
+  .map-resize-handle.dragging::before{
+    background:#a87a1d;
+    width:64px;
   }
 
   /* PANEL — flows naturally in column, always visible */
@@ -575,6 +594,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
       <button class="bottom-nav-item active" id="bnav-home" onclick="if(window.mobileNavBottom)mobileNavBottom('home')">
         <span class="nav-icon">⊞</span>
         <span class="nav-label">Home</span>
+      </button>
+      <button class="bottom-nav-item" id="bnav-list" onclick="if(window.mobileNavBottom)mobileNavBottom('list')">
+        <span class="nav-icon">≡</span>
+        <span class="nav-label">List</span>
       </button>
       <button class="bottom-nav-item" id="bnav-activity" onclick="if(window.mobileNavBottom)mobileNavBottom('activity')">
         <span class="nav-icon">◎</span>
@@ -1098,6 +1121,13 @@ function searchNearby(center) {
       let defaultOcc = 'empty';
       if (ratingCount > 500) defaultOcc = 'full';
       else if (ratingCount > 100) defaultOcc = 'moderate';
+      // Pull a real photo URL when Places gives us one (works because Maps JS is loaded)
+      let photoUrl = null;
+      try {
+        if (p.photos && p.photos.length && typeof p.photos[0].getUrl === 'function') {
+          photoUrl = p.photos[0].getUrl({maxWidth: 280, maxHeight: 160});
+        }
+      } catch(_) {}
       return {
         id: p.place_id,
         name: p.name,
@@ -1110,6 +1140,7 @@ function searchNearby(center) {
         reports: 0,
         rating: p.rating || null,
         ratingCount,
+        photoUrl,
         isUser: false,
         googleDefault: true,
       };
@@ -1618,10 +1649,14 @@ function renderNearYouCarousel() {
     const badgeBg = s.occ === 'empty' ? '#5C7A5F' : s.occ === 'moderate' ? '#C8922A' : '#B5511A';
     const cap = s.occ.charAt(0).toUpperCase() + s.occ.slice(1);
     const checkins = s.reports || 0;
-    const bgStyle = gradients[Math.abs(s.name.charCodeAt(0)) % gradients.length];
+    // Real Google photo if we have it, gradient otherwise
+    const fallback = gradients[Math.abs(s.name.charCodeAt(0)) % gradients.length];
+    const bgStyle = s.photoUrl
+      ? `url("${s.photoUrl.replace(/"/g,'%22')}") center/cover, ${fallback}`
+      : fallback;
     // Truncate address — first part only
     const shortAddr = s.addr ? s.addr.split(',')[0] : '';
-    
+
     return `<div class="near-you-card" onclick="showShop('${s.id}')">
       <div class="near-you-card-img" style="background:${bgStyle};">
         <div class="near-you-card-badge" style="background:${badgeBg};">${pct}%</div>
@@ -2397,15 +2432,21 @@ window.mobileNavBottom = function(dest) {
   if (btn) btn.classList.add('active');
   const main = document.querySelector('.main');
   if (main && window.innerWidth <= 768) main.scrollTop = 0;
-  // Show carousel on Home only — hide on Activity/Favorites/Profile
+  // List mode = full-screen list, no map, no carousel
+  document.body.classList.toggle('list-mode', dest === 'list');
+  // Show carousel on Home only
   const carousel = document.getElementById('near-you-section');
   if (carousel && window.innerWidth <= 768) {
-    carousel.style.display = dest === 'home' ? 'block' : 'none';
+    carousel.style.display = (dest === 'home') ? 'block' : 'none';
   }
-  if (dest === 'home') showNearby();
+  if (dest === 'home' || dest === 'list') showNearby();
   else if (dest === 'activity') showFeed();
   else if (dest === 'favorites') showFavorites();
   else if (dest === 'profile') showMyProfile();
+  // Trigger map resize on the way back IN to a map view
+  if (dest !== 'list' && window.map && window.google && window.google.maps && window.google.maps.event) {
+    setTimeout(() => window.google.maps.event.trigger(window.map, 'resize'), 200);
+  }
 };
 
 // Update carousel title based on map state
@@ -2423,24 +2464,98 @@ function updateCarouselTitle() {
   }
 }
 
-// ── NEW: Tap drag handle to expand/collapse map ──
+// ── NEW: Drag (or tap) the gold handle to resize the map ──
 function setupMapResize() {
   const handle = document.getElementById('map-resize-handle');
   const mapWrap = document.querySelector('.map-wrap');
   if (!handle || !mapWrap) return;
-  
-  handle.addEventListener('click', () => {
+  if (handle.dataset.bound) return; // idempotent — safe to call again
+  handle.dataset.bound = '1';
+
+  const MIN_PX = 160;
+  const getMaxPx = () => Math.max(240, Math.round(window.innerHeight * 0.78));
+
+  let dragging = false;
+  let startY = 0;
+  let startH = 0;
+  let moved = false;
+
+  const triggerMapResize = () => {
+    if (window.map && window.google && window.google.maps && window.google.maps.event) {
+      window.google.maps.event.trigger(window.map, 'resize');
+    }
+  };
+
+  const onDown = (e) => {
     if (window.innerWidth > 768) return;
-    mapWrap.classList.toggle('expanded');
-    // Trigger Google Maps resize after the CSS transition
-    setTimeout(() => {
-      if (window.map && window.google && window.google.maps && window.google.maps.event) {
-        window.google.maps.event.trigger(window.map, 'resize');
-      }
-    }, 350);
-  });
+    dragging = true;
+    moved = false;
+    const pt = e.touches ? e.touches[0] : e;
+    startY = pt.clientY;
+    // Read current map height in pixels (works whether height is set via vh or var)
+    startH = mapWrap.getBoundingClientRect().height;
+    mapWrap.classList.add('dragging');
+    handle.classList.add('dragging');
+    // Capture pointer so we keep getting events even off-element
+    if (e.pointerId !== undefined && handle.setPointerCapture) {
+      try { handle.setPointerCapture(e.pointerId); } catch(_) {}
+    }
+    // Prevent text selection / page scroll while dragging
+    e.preventDefault();
+  };
+
+  const onMove = (e) => {
+    if (!dragging) return;
+    const pt = e.touches ? e.touches[0] : e;
+    const dy = pt.clientY - startY;
+    if (Math.abs(dy) > 4) moved = true;
+    let h = startH + dy;
+    h = Math.max(MIN_PX, Math.min(getMaxPx(), h));
+    // Drive height via CSS var so it composes with the @media rule
+    mapWrap.style.setProperty('--map-h', h + 'px');
+    e.preventDefault();
+  };
+
+  const onUp = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    mapWrap.classList.remove('dragging');
+    handle.classList.remove('dragging');
+    // Tap (no real movement) → toggle between compact and expanded
+    if (!moved) {
+      const cur = mapWrap.getBoundingClientRect().height;
+      const compact = Math.round(window.innerHeight * 0.38);
+      const expanded = Math.round(window.innerHeight * 0.65);
+      const target = (cur < (compact + expanded) / 2) ? expanded : compact;
+      mapWrap.style.setProperty('--map-h', target + 'px');
+    }
+    setTimeout(triggerMapResize, 200);
+  };
+
+  // Pointer events cover mouse + modern touch in one shot
+  if (window.PointerEvent) {
+    handle.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove, {passive: false});
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  } else {
+    // Fallback for old Safari that doesn't have PointerEvent
+    handle.addEventListener('touchstart', onDown, {passive: false});
+    window.addEventListener('touchmove', onMove, {passive: false});
+    window.addEventListener('touchend', onUp);
+    window.addEventListener('touchcancel', onUp);
+    handle.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
 }
-setTimeout(setupMapResize, 800);
+// Bind as soon as the DOM exists, and again after Maps loads (defensive)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupMapResize);
+} else {
+  setupMapResize();
+}
+setTimeout(setupMapResize, 1500);
 
 // Show mobile UI elements
 function setupMobileUI() {
