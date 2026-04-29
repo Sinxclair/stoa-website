@@ -227,10 +227,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 
 /* LIST MODE — when "List" tab active, hide map+carousel, give list full screen */
 body.list-mode .map-wrap,
-body.list-mode .map-resize-handle,
 body.list-mode .near-you-section,
 body.shop-mode .map-wrap,
-body.shop-mode .map-resize-handle,
 body.shop-mode .near-you-section{display:none !important;}
 body.shop-mode .bottom-nav{display:none !important;}
 body.list-mode .panel{flex:1 !important;}
@@ -292,53 +290,47 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
     padding-bottom:70px; /* space for bottom nav */
   }
 
-  /* MAP — compact, drag handle adjusts height. Use --map-h CSS var so JS drag updates it live. */
+  /* MAP — three sizes via toggle button */
   .map-wrap{
     position:relative !important;
     width:100% !important;
-    height:var(--map-h, 38vh) !important;
-    min-height:160px;
+    height:38vh !important;
+    min-height:220px;
     flex-shrink:0;
     border-radius:0 0 16px 16px;
     overflow:hidden;
-    transition:height 0.15s ease;
+    transition:height 0.3s ease;
   }
-  /* When user is actively dragging, kill transition so movement feels 1:1 */
-  .map-wrap.dragging{transition:none !important;}
-  .map-wrap.expanded{
-    height:65vh !important;
+  .map-wrap.size-medium{
+    height:55vh !important;
+  }
+  .map-wrap.size-large{
+    height:75vh !important;
   }
 
-  /* DRAG HANDLE between map and content — bigger hit area, more obvious */
-  .map-resize-handle{
+  /* MAP TOGGLE BUTTON — expand/collapse map size */
+  .map-toggle-btn{
+    position:absolute;
+    bottom:12px;
+    left:50%;
+    transform:translateX(-50%);
+    background:white;
+    border:none;
+    border-radius:50px;
+    padding:8px 16px;
+    font-family:'DM Sans',sans-serif;
+    font-size:12px;
+    font-weight:500;
+    color:var(--esp);
+    box-shadow:0 2px 12px rgba(28,15,6,0.18);
+    cursor:pointer;
+    z-index:6;
     display:flex;
     align-items:center;
-    justify-content:center;
-    height:34px;
-    background:var(--cream);
-    cursor:grab;
-    flex-shrink:0;
-    position:relative;
-    z-index:15;
-    margin-top:-14px;
-    border-radius:18px 18px 0 0;
-    touch-action:none;        /* CRITICAL: stop browser from stealing the touch as a scroll */
-    user-select:none;
-    -webkit-user-select:none;
-    -webkit-tap-highlight-color:transparent;
+    gap:5px;
   }
-  .map-resize-handle:active{cursor:grabbing;}
-  .map-resize-handle::before{
-    content:'';
-    width:52px;
-    height:6px;
-    border-radius:4px;
-    background:var(--gold);
-    box-shadow:0 1px 3px rgba(28,15,6,0.18);
-  }
-  .map-resize-handle.dragging::before{
-    background:#a87a1d;
-    width:64px;
+  .map-toggle-btn:active{
+    transform:translateX(-50%) scale(0.95);
   }
 
   /* PANEL — flows naturally in column, always visible */
@@ -461,7 +453,7 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
 @media (min-width: 769px) {
   .near-you-section{display:none !important;}
   .bottom-nav{display:none !important;}
-  .map-resize-handle{display:none !important;}
+  
   .sheet-handle,
   .mobile-hamburger,
   .mobile-menu-overlay,
@@ -500,9 +492,13 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
   </div>
 
   <div class="main">
-    <div class="map-wrap">
+    <div class="map-wrap" id="map-wrap">
       <div id="map"></div>
       <button class="locate-btn" onclick="zoomToMe()" title="Find my location">📍</button>
+      <button class="map-toggle-btn" id="map-toggle-btn" onclick="if(window.toggleMapSize)toggleMapSize()" style="display:none;">
+        <span id="map-toggle-icon">⤢</span>
+        <span id="map-toggle-label">Bigger map</span>
+      </button>
       <div class="legend">
         <div class="legend-title">Occupancy</div>
         <div class="legend-row"><div class="ldot" style="background:var(--empty)"></div>Empty</div>
@@ -512,10 +508,7 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
       </div>
     </div>
 
-    <!-- NEW: DRAG HANDLE to resize map (mobile only) -->
-    <div class="map-resize-handle" id="map-resize-handle"></div>
-
-    <!-- NEW: NEAR YOU NOW CAROUSEL (mobile only, contextual) -->
+<!-- NEW: NEAR YOU NOW CAROUSEL (mobile only, contextual) -->
     <div class="near-you-section" id="near-you-section">
       <div class="near-you-header">
         <div class="near-you-title" id="near-you-title">Near you now</div>
@@ -2542,70 +2535,7 @@ function updateCarouselTitle() {
 }
 
 // ── NEW: Drag (or tap) the gold handle to resize the map ──
-function setupMapResize() {
-  const handle = document.getElementById('map-resize-handle');
-  const mapWrap = document.querySelector('.map-wrap');
-  if (!handle || !mapWrap || handle.dataset.bound) return;
-  handle.dataset.bound = '1';
 
-  let dragging = false;
-  let startY = 0;
-  let startH = 0;
-
-  const startDrag = (y) => {
-    dragging = true;
-    startY = y;
-    startH = mapWrap.getBoundingClientRect().height;
-    handle.classList.add('dragging');
-  };
-
-  const moveDrag = (y) => {
-    if (!dragging) return;
-    const dy = y - startY;
-    let h = startH + dy;
-    h = Math.max(140, Math.min(window.innerHeight * 0.8, h));
-    mapWrap.style.setProperty('--map-h', h + 'px');
-  };
-
-  const endDrag = () => {
-    if (!dragging) return;
-    dragging = false;
-    handle.classList.remove('dragging');
-    if (window.map && window.google) {
-      setTimeout(() => google.maps.event.trigger(window.map, 'resize'), 200);
-    }
-  };
-
-  // Touch events
-  handle.addEventListener('touchstart', (e) => {
-    if (window.innerWidth > 768) return;
-    startDrag(e.touches[0].clientY);
-    e.preventDefault();
-  }, {passive: false});
-
-  document.addEventListener('touchmove', (e) => {
-    if (!dragging) return;
-    moveDrag(e.touches[0].clientY);
-    e.preventDefault();
-  }, {passive: false});
-
-  document.addEventListener('touchend', endDrag);
-
-  // Mouse events
-  handle.addEventListener('mousedown', (e) => {
-    if (window.innerWidth > 768) return;
-    startDrag(e.clientY);
-    e.preventDefault();
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    moveDrag(e.clientY);
-  });
-
-  document.addEventListener('mouseup', endDrag);
-}
-setupMapResize();
-setTimeout(setupMapResize, 1500);
 
 setTimeout(maybeShowWelcome, 300);
 
@@ -2631,6 +2561,41 @@ window.zoomToMe = function() {
     {enableHighAccuracy: true, timeout: 8000}
   );
 };
+
+// ── Map size toggle (mobile only) ──
+window.toggleMapSize = function() {
+  const wrap = document.getElementById('map-wrap');
+  const icon = document.getElementById('map-toggle-icon');
+  const label = document.getElementById('map-toggle-label');
+  if (!wrap) return;
+  if (wrap.classList.contains('size-large')) {
+    wrap.classList.remove('size-large');
+    if (icon) icon.textContent = '⤢';
+    if (label) label.textContent = 'Bigger map';
+  } else if (wrap.classList.contains('size-medium')) {
+    wrap.classList.remove('size-medium');
+    wrap.classList.add('size-large');
+    if (icon) icon.textContent = '⤡';
+    if (label) label.textContent = 'Smaller map';
+  } else {
+    wrap.classList.add('size-medium');
+    if (icon) icon.textContent = '⤢';
+    if (label) label.textContent = 'Bigger map';
+  }
+  setTimeout(function() {
+    if (window.map && window.google && window.google.maps && window.google.maps.event) {
+      window.google.maps.event.trigger(window.map, 'resize');
+    }
+  }, 300);
+};
+function setupMapToggleButton() {
+  const btn = document.getElementById('map-toggle-btn');
+  if (!btn) return;
+  btn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+}
+setupMapToggleButton();
+window.addEventListener('resize', setupMapToggleButton);
+
 
 // ── Boot ──
 const s = document.createElement('script');
