@@ -204,13 +204,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .near-you-link{font-size:12px;color:var(--gold);cursor:pointer;font-weight:500;}
 .near-you-scroll{display:flex;gap:12px;overflow-x:auto;padding:0 16px 8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .near-you-scroll::-webkit-scrollbar{display:none;}
-.near-you-card{flex-shrink:0;width:160px;border-radius:14px;overflow:hidden;background:white;box-shadow:0 2px 10px rgba(28,15,6,0.08);cursor:pointer;scroll-snap-align:start;transition:transform 0.15s;}
+.near-you-card{flex-shrink:0;width:200px;border-radius:14px;overflow:hidden;background:white;box-shadow:0 2px 10px rgba(28,15,6,0.08);cursor:pointer;scroll-snap-align:start;transition:transform 0.15s;}
 .near-you-card:active{transform:scale(0.97);}
-.near-you-card-img{height:100px;background:var(--warm);position:relative;background-size:cover;background-position:center;}
-.near-you-card-badge{position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;color:white;}
-.near-you-card-body{padding:8px 10px 10px;}
-.near-you-card-name{font-size:13px;font-weight:500;color:var(--esp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.near-you-card-meta{font-size:11px;color:#8A7A6A;margin-top:2px;display:flex;align-items:center;gap:4px;}
+.near-you-card-img{height:90px;background:var(--warm);position:relative;background-size:cover;background-position:center;}
+.near-you-card-badge{position:absolute;top:8px;right:8px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;color:white;}
+.near-you-card-body{padding:10px 12px 12px;}
+.near-you-card-name{font-size:13px;font-weight:500;color:var(--esp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
+.near-you-card-addr{font-size:10px;color:#8A7A6A;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.near-you-card-row{display:flex;justify-content:space-between;align-items:center;margin-top:7px;gap:6px;}
+.near-you-card-meta{font-size:10px;color:#8A7A6A;display:flex;align-items:center;gap:3px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.near-you-card-pill{font-size:9px;font-weight:500;padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
 
 /* ═══════════════════════════════════════════
    NEW: BOTTOM NAV BAR (mobile only)
@@ -272,15 +275,51 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     padding-bottom:70px; /* space for bottom nav */
   }
 
-  /* MAP — compact, not full screen */
+  /* MAP — compact, height adjustable via drag handle */
   .map-wrap{
     position:relative !important;
     width:100% !important;
-    height:38vh !important;
-    min-height:220px;
+    height:var(--map-height, 38vh) !important;
+    min-height:120px;
+    max-height:80vh;
     flex-shrink:0;
     border-radius:0 0 16px 16px;
     overflow:hidden;
+    transition:height 0.2s ease;
+  }
+  
+  /* DRAG HANDLE between map and content */
+  .map-resize-handle{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:22px;
+    background:var(--cream);
+    cursor:ns-resize;
+    touch-action:none;
+    flex-shrink:0;
+    position:relative;
+    z-index:5;
+    margin-top:-8px;
+    border-radius:16px 16px 0 0;
+  }
+  .map-resize-handle::before{
+    content:'';
+    width:42px;
+    height:5px;
+    border-radius:3px;
+    background:#C0B4A8;
+    transition:background 0.15s;
+  }
+  .map-resize-handle:hover::before,
+  .map-resize-handle:active::before{
+    background:var(--gold);
+  }
+  .map-resize-handle.dragging{
+    transition:none;
+  }
+  .map-wrap.dragging{
+    transition:none;
   }
 
   /* PANEL — flows naturally in column, always visible */
@@ -389,6 +428,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 @media (min-width: 769px) {
   .near-you-section{display:none !important;}
   .bottom-nav{display:none !important;}
+  .map-resize-handle{display:none !important;}
   .sheet-handle,
   .mobile-hamburger,
   .mobile-menu-overlay,
@@ -439,10 +479,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
       </div>
     </div>
 
-    <!-- NEW: NEAR YOU NOW CAROUSEL (mobile only) -->
+    <!-- NEW: DRAG HANDLE to resize map (mobile only) -->
+    <div class="map-resize-handle" id="map-resize-handle"></div>
+
+    <!-- NEW: NEAR YOU NOW CAROUSEL (mobile only, contextual) -->
     <div class="near-you-section" id="near-you-section">
       <div class="near-you-header">
-        <div class="near-you-title">Near you now</div>
+        <div class="near-you-title" id="near-you-title">Near you now</div>
         <div class="near-you-link" onclick="showNearby()">See all →</div>
       </div>
       <div class="near-you-scroll" id="near-you-scroll"></div>
@@ -1039,7 +1082,13 @@ window.initMap = function() {
   }
 
   let idleT;
-  map.addListener('idle', () => { clearTimeout(idleT); idleT = setTimeout(() => searchNearby(map.getCenter()), 800); });
+  map.addListener('idle', () => { 
+    clearTimeout(idleT); 
+    idleT = setTimeout(() => {
+      searchNearby(map.getCenter());
+      updateCarouselTitle();
+    }, 800); 
+  });
 };
 
 function searchNearby(center) {
@@ -1565,7 +1614,7 @@ function renderNearYouCarousel() {
     if (b.reports !== a.reports) return b.reports - a.reports;
     const occOrder = { empty: 0, moderate: 1, full: 2 };
     return (occOrder[a.occ] || 1) - (occOrder[b.occ] || 1);
-  }).slice(0, 8);
+  }).slice(0, 10);
   
   const gradients = [
     'linear-gradient(135deg, #E8D5BC 0%, #C8922A 100%)',
@@ -1578,8 +1627,11 @@ function renderNearYouCarousel() {
     const color = occColor(s.occ);
     const pct = s.pct;
     const badgeBg = s.occ === 'empty' ? '#5C7A5F' : s.occ === 'moderate' ? '#C8922A' : '#B5511A';
+    const cap = s.occ.charAt(0).toUpperCase() + s.occ.slice(1);
     const checkins = s.reports || 0;
     const bgStyle = gradients[Math.abs(s.name.charCodeAt(0)) % gradients.length];
+    // Truncate address — first part only
+    const shortAddr = s.addr ? s.addr.split(',')[0] : '';
     
     return `<div class="near-you-card" onclick="showShop('${s.id}')">
       <div class="near-you-card-img" style="background:${bgStyle};">
@@ -1587,9 +1639,13 @@ function renderNearYouCarousel() {
       </div>
       <div class="near-you-card-body">
         <div class="near-you-card-name">${s.name}</div>
-        <div class="near-you-card-meta">
-          <span style="color:${color};">●</span>
-          ${checkins > 0 ? checkins + ' checked in' : 'Est. ' + s.occ}
+        <div class="near-you-card-addr">${shortAddr}</div>
+        <div class="near-you-card-row">
+          <div class="near-you-card-meta">
+            <span style="color:${color};">●</span>
+            ${checkins > 0 ? checkins + ' check-in' + (checkins!==1?'s':'') : 'Estimate'}
+          </div>
+          <div class="near-you-card-pill" style="background:${color}1a;color:${color};">${cap}</div>
         </div>
       </div>
     </div>`;
@@ -2352,11 +2408,84 @@ window.mobileNavBottom = function(dest) {
   if (btn) btn.classList.add('active');
   const main = document.querySelector('.main');
   if (main && window.innerWidth <= 768) main.scrollTop = 0;
+  // Show carousel on Home only — hide on Activity/Favorites/Profile
+  const carousel = document.getElementById('near-you-section');
+  if (carousel && window.innerWidth <= 768) {
+    carousel.style.display = dest === 'home' ? 'block' : 'none';
+  }
   if (dest === 'home') showNearby();
   else if (dest === 'activity') showFeed();
   else if (dest === 'favorites') showFavorites();
   else if (dest === 'profile') showMyProfile();
 };
+
+// Update carousel title based on map state
+function updateCarouselTitle() {
+  const titleEl = document.getElementById('near-you-title');
+  if (!titleEl || !map) return;
+  // If user has moved the map far from their location, change to "Near this location"
+  if (navigator.geolocation && map) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const userLoc = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+      const center = map.getCenter();
+      const dist = getDistanceMeters(userLoc.lat, userLoc.lng, center.lat(), center.lng());
+      titleEl.textContent = dist > 1500 ? 'Near this location' : 'Near you now';
+    }, () => {}, {timeout: 2000, maximumAge: 60000});
+  }
+}
+
+// ── NEW: Map drag-to-resize handle ──
+function setupMapResize() {
+  const handle = document.getElementById('map-resize-handle');
+  const mapWrap = document.querySelector('.map-wrap');
+  if (!handle || !mapWrap) return;
+  
+  let isDragging = false;
+  let startY = 0;
+  let startHeight = 0;
+  
+  function getTouchY(e) {
+    return e.touches ? e.touches[0].clientY : e.clientY;
+  }
+  
+  function startDrag(e) {
+    if (window.innerWidth > 768) return;
+    isDragging = true;
+    startY = getTouchY(e);
+    startHeight = mapWrap.offsetHeight;
+    handle.classList.add('dragging');
+    mapWrap.classList.add('dragging');
+    e.preventDefault();
+  }
+  
+  function onDrag(e) {
+    if (!isDragging) return;
+    const currentY = getTouchY(e);
+    const delta = currentY - startY;
+    const newHeight = Math.max(120, Math.min(window.innerHeight * 0.8, startHeight + delta));
+    document.documentElement.style.setProperty('--map-height', newHeight + 'px');
+    e.preventDefault();
+  }
+  
+  function endDrag() {
+    if (!isDragging) return;
+    isDragging = false;
+    handle.classList.remove('dragging');
+    mapWrap.classList.remove('dragging');
+    // Trigger Google Maps resize so the map fills the new container size
+    if (map && google?.maps?.event) {
+      google.maps.event.trigger(map, 'resize');
+    }
+  }
+  
+  handle.addEventListener('touchstart', startDrag, {passive: false});
+  handle.addEventListener('touchmove', onDrag, {passive: false});
+  handle.addEventListener('touchend', endDrag);
+  handle.addEventListener('mousedown', startDrag);
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', endDrag);
+}
+setTimeout(setupMapResize, 500);
 
 // Show mobile UI elements
 function setupMobileUI() {
