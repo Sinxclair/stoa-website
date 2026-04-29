@@ -295,23 +295,43 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
   .map-wrap{
     position:relative !important;
     width:100% !important;
-    height:32vh !important;
-    min-height:200px;
+    height:38vh !important;
+    min-height:0 !important;
+    max-height:38vh !important;
     flex-shrink:0;
     border-radius:0 0 16px 16px;
     overflow:hidden;
-    transition:height 0.3s ease;
+    transition:height 0.3s ease, max-height 0.3s ease;
   }
   body .map-wrap.size-medium,
   .map-wrap.size-medium{
-    height:55vh !important;
-    min-height:55vh !important;
+    height:60vh !important;
+    max-height:60vh !important;
+    min-height:60vh !important;
   }
   body .map-wrap.size-large,
   .map-wrap.size-large{
-    height:75vh !important;
-    min-height:75vh !important;
+    height:80vh !important;
+    max-height:80vh !important;
+    min-height:80vh !important;
   }
+
+  /* CAROUSEL on mobile — always visible, fills space below map */
+  body.home-mode .near-you-section{
+    display:block !important;
+    flex:1 1 auto !important;
+    min-height:280px !important;
+    padding:14px 0 12px !important;
+  }
+  body.home-mode.size-large-active .near-you-section,
+  body.home-mode.size-medium-active .near-you-section{
+    flex:0 0 auto !important;
+    min-height:0 !important;
+  }
+  .near-you-header{padding:0 16px 10px !important;}
+  .near-you-title{font-size:17px !important;}
+  .near-you-card{width:170px !important;}
+  .near-you-card-img{height:90px !important;}
 
   /* MAP TOGGLE BUTTON — top of map, always visible */
   .map-toggle-btn{
@@ -2575,20 +2595,25 @@ window.toggleMapSize = function() {
   const wrap = document.getElementById('map-wrap');
   const icon = document.getElementById('map-toggle-icon');
   const label = document.getElementById('map-toggle-label');
+  const body = document.body;
   if (!wrap) { console.warn('[STOA] map-wrap not found'); return; }
   console.log('[STOA] toggleMapSize called. current classes:', wrap.className);
   if (wrap.classList.contains('size-large')) {
     wrap.classList.remove('size-large');
     wrap.classList.remove('size-medium');
+    body.classList.remove('size-medium-active', 'size-large-active');
     if (icon) icon.textContent = '⤢';
     if (label) label.textContent = 'Bigger map';
   } else if (wrap.classList.contains('size-medium')) {
     wrap.classList.remove('size-medium');
     wrap.classList.add('size-large');
+    body.classList.remove('size-medium-active');
+    body.classList.add('size-large-active');
     if (icon) icon.textContent = '⤡';
     if (label) label.textContent = 'Smaller map';
   } else {
     wrap.classList.add('size-medium');
+    body.classList.add('size-medium-active');
     if (icon) icon.textContent = '⤢';
     if (label) label.textContent = 'Bigger map';
   }
