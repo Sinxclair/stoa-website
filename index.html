@@ -47,7 +47,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .locate-btn:hover{transform:scale(1.08);}
 .locate-btn:active{transform:scale(0.95);}
 .locate-btn.loading{animation:spin 0.8s linear infinite;}
-@media (max-width: 768px){.locate-btn{bottom:84px;}}
+
 /* PANEL */
 .panel{width:340px;flex-shrink:0;background:var(--cream);border-left:1px solid rgba(28,15,6,0.08);display:flex;flex-direction:column;overflow:hidden;position:relative;}
 .panel-view{display:none;flex-direction:column;flex:1;overflow:hidden;position:absolute;top:0;left:0;right:0;bottom:0;background:var(--cream);}
@@ -55,7 +55,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .panel-scroll{flex:1;overflow-y:auto;}
 
 /* SHOP DETAIL */
-.shop-hdr{padding:14px 18px 10px;background:white;border-bottom:1px solid rgba(28,15,6,0.06);}
+.shop-hdr{padding:14px 18px 10px;background:white;border-bottom:1px solid rgba(28,15,6,0.06);position:relative;}
 .back-link{font-size:12px;color:var(--gold);cursor:pointer;margin-bottom:7px;display:inline-block;}
 .back-link:hover{text-decoration:underline;}
 .shop-name{font-family:'DM Serif Display',serif;font-size:20px;color:var(--esp);line-height:1.2;}
@@ -178,12 +178,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .loading-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(245,237,224,0.3);border-top-color:var(--cream);border-radius:50%;animation:spin 0.7s linear infinite;margin-right:6px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes slidein{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
 /* FAVORITES */
 .fav-star{background:transparent;border:none;cursor:pointer;font-size:20px;color:#C0B4A8;transition:all 0.15s;padding:4px;line-height:1;}
 .fav-star:hover{transform:scale(1.15);}
 .fav-star.on{color:var(--gold);}
 .fav-star.shop-detail-star{position:absolute;top:12px;right:14px;font-size:24px;}
-.shop-hdr{position:relative;}
 .fav-star.nearby-star{font-size:18px;padding:2px 4px;}
 
 /* VERIFY EMAIL BANNER */
@@ -195,205 +195,204 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .forgot-link{font-size:11px;color:var(--gold);text-align:right;cursor:pointer;margin-top:-6px;margin-bottom:4px;}
 .forgot-link:hover{text-decoration:underline;}
 
-/* MOBILE — slim bar, side menu, bottom sheet */
+/* ═══════════════════════════════════════════
+   NEW: NEAR YOU NOW CAROUSEL
+   ═══════════════════════════════════════════ */
+.near-you-section{display:none;background:var(--cream);padding:14px 0 10px;flex-shrink:0;}
+.near-you-header{display:flex;justify-content:space-between;align-items:center;padding:0 16px 10px;}
+.near-you-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--esp);}
+.near-you-link{font-size:12px;color:var(--gold);cursor:pointer;font-weight:500;}
+.near-you-scroll{display:flex;gap:12px;overflow-x:auto;padding:0 16px 8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.near-you-scroll::-webkit-scrollbar{display:none;}
+.near-you-card{flex-shrink:0;width:160px;border-radius:14px;overflow:hidden;background:white;box-shadow:0 2px 10px rgba(28,15,6,0.08);cursor:pointer;scroll-snap-align:start;transition:transform 0.15s;}
+.near-you-card:active{transform:scale(0.97);}
+.near-you-card-img{height:100px;background:var(--warm);position:relative;background-size:cover;background-position:center;}
+.near-you-card-badge{position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;color:white;}
+.near-you-card-body{padding:8px 10px 10px;}
+.near-you-card-name{font-size:13px;font-weight:500;color:var(--esp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.near-you-card-meta{font-size:11px;color:#8A7A6A;margin-top:2px;display:flex;align-items:center;gap:4px;}
+
+/* ═══════════════════════════════════════════
+   NEW: BOTTOM NAV BAR (mobile only)
+   ═══════════════════════════════════════════ */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid rgba(28,15,6,0.08);z-index:60;padding:6px 0 calc(6px + env(safe-area-inset-bottom));}
+.bottom-nav-inner{display:flex;justify-content:space-around;align-items:center;}
+.bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:4px 12px;font-family:'DM Sans',sans-serif;color:#A09080;transition:color 0.15s;}
+.bottom-nav-item.active{color:var(--esp);}
+.bottom-nav-item .nav-icon{font-size:20px;}
+.bottom-nav-item .nav-label{font-size:10px;font-weight:500;}
+
+/* ═══════════════════════════════════════════
+   MOBILE — overhauled responsive layout
+   ═══════════════════════════════════════════ */
 @media (max-width: 768px) {
-  /* Thin top bar — just logo + hamburger */
-  .topbar { padding: 10px 14px; gap: 8px; }
-  .logo { font-size: 22px; }
-  .search-wrap { display: none; }
-  .tb-actions { display: none; }
+  .near-you-section{display:block;}
+  .bottom-nav{display:block;}
+
+  /* Thin top bar */
+  .topbar{padding:10px 14px;gap:8px;}
+  .logo{font-size:22px;}
+  .search-wrap{display:none;}
+  .tb-actions{display:none;}
 
   /* Hamburger button */
-  .mobile-hamburger {
-    display: flex;
-    margin-left: auto;
-    background: rgba(245,237,224,0.08);
-    border: 1px solid rgba(245,237,224,0.16);
-    color: var(--cream);
-    border-radius: 50px;
-    width: 38px;
-    height: 38px;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 18px;
+  .mobile-hamburger{
+    display:flex;
+    margin-left:auto;
+    background:rgba(245,237,224,0.08);
+    border:1px solid rgba(245,237,224,0.16);
+    color:var(--cream);
+    border-radius:50px;
+    width:38px;
+    height:38px;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:18px;
   }
 
-  /* Side menu (slides from right) */
-  .mobile-menu-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(28, 15, 6, 0.5);
-    z-index: 100;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-  }
-  .mobile-menu-overlay.open { opacity: 1; pointer-events: all; }
+  /* Side menu */
+  .mobile-menu-overlay{display:block;position:fixed;inset:0;background:rgba(28,15,6,0.5);z-index:100;opacity:0;pointer-events:none;transition:opacity 0.25s ease;}
+  .mobile-menu-overlay.open{opacity:1;pointer-events:all;}
+  .mobile-menu{position:fixed;top:0;right:0;bottom:0;width:75%;max-width:280px;background:var(--esp);z-index:101;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.34,1.2,0.64,1);display:flex;flex-direction:column;padding:20px 0;box-shadow:-4px 0 20px rgba(0,0,0,0.2);}
+  .mobile-menu.open{transform:translateX(0);}
+  .mobile-menu-close{background:transparent;border:none;color:var(--cream);font-size:20px;width:38px;height:38px;margin:0 14px 12px auto;cursor:pointer;border-radius:50%;}
+  .mobile-menu-item{background:transparent;border:none;color:var(--cream);font-family:'DM Sans',sans-serif;font-size:15px;text-align:left;padding:14px 22px;cursor:pointer;border-bottom:0.5px solid rgba(245,237,224,0.08);transition:background 0.15s;}
+  .mobile-menu-item:hover{background:rgba(245,237,224,0.05);}
+  .mobile-menu-item.gold{color:var(--gold);font-weight:500;}
 
-  .mobile-menu {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 75%;
-    max-width: 280px;
-    background: var(--esp);
-    z-index: 101;
-    transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
-    display: flex;
-    flex-direction: column;
-    padding: 20px 0;
-    box-shadow: -4px 0 20px rgba(0,0,0,0.2);
-  }
-  .mobile-menu.open { transform: translateX(0); }
-
-  .mobile-menu-close {
-    background: transparent;
-    border: none;
-    color: var(--cream);
-    font-size: 20px;
-    width: 38px;
-    height: 38px;
-    margin: 0 14px 12px auto;
-    cursor: pointer;
-    border-radius: 50%;
+  /* MAIN — scrollable column on mobile */
+  .main{
+    display:flex;
+    flex-direction:column;
+    flex:1;
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:70px; /* space for bottom nav */
   }
 
-  .mobile-menu-item {
-    background: transparent;
-    border: none;
-    color: var(--cream);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    text-align: left;
-    padding: 14px 22px;
-    cursor: pointer;
-    border-bottom: 0.5px solid rgba(245,237,224,0.08);
-    transition: background 0.15s;
+  /* MAP — compact, not full screen */
+  .map-wrap{
+    position:relative !important;
+    width:100% !important;
+    height:38vh !important;
+    min-height:220px;
+    flex-shrink:0;
+    border-radius:0 0 16px 16px;
+    overflow:hidden;
   }
-  .mobile-menu-item:hover { background: rgba(245,237,224,0.05); }
-  .mobile-menu-item.gold { color: var(--gold); font-weight: 500; }
 
-  /* Map takes full screen */
-  .main { position: relative; }
-  .map-wrap { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* PANEL — flows naturally in column, always visible */
+  .panel{
+    position:relative !important;
+    width:100% !important;
+    height:auto !important;
+    transform:none !important;
+    border-left:none !important;
+    flex-shrink:0;
+    z-index:1;
+    overflow:visible;
+  }
+  .panel.list-open{
+    transform:none !important;
+  }
 
-  /* Legend becomes a tiny ? icon */
-  .legend {
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    bottom: auto;
-    top: 72px;
-    left: auto;
-    right: 12px;
-    border-radius: 50%;
-    background: var(--gold);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 5;
-    box-shadow: 0 2px 8px rgba(28,15,6,0.2);
+  /* Panel views — auto height on mobile */
+  .panel-view{
+    position:relative !important;
+    top:auto !important;
+    left:auto !important;
+    right:auto !important;
+    bottom:auto !important;
   }
-  .legend-title, .legend-row { display: none; }
-  .legend::before {
-    content: '?';
-    font-family: 'DM Serif Display', serif;
-    font-size: 20px;
-    font-weight: 500;
+  .panel-scroll{
+    overflow-y:visible !important;
+    max-height:none !important;
+    flex:none !important;
   }
-  .legend.expanded {
-    width: auto;
-    height: auto;
-    padding: 10px 14px;
-    border-radius: 12px;
-    background: white;
-    color: var(--esp);
-    gap: 6px;
-    flex-direction: column;
-    align-items: flex-start;
+
+  /* Hide old FAB and close button — not needed with new layout */
+  .view-list-fab{display:none !important;}
+  .panel-close-btn{display:none !important;}
+
+  /* Legend — small ? icon */
+  .legend{
+    width:36px;
+    height:36px;
+    padding:0;
+    bottom:auto;
+    top:10px;
+    left:auto;
+    right:12px;
+    border-radius:50%;
+    background:var(--gold);
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:5;
+    box-shadow:0 2px 8px rgba(28,15,6,0.2);
   }
-  .legend.expanded::before { display: none; }
+  .legend-title,.legend-row{display:none;}
+  .legend::before{
+    content:'?';
+    font-family:'DM Serif Display',serif;
+    font-size:20px;
+    font-weight:500;
+  }
+  .legend.expanded{
+    width:auto;
+    height:auto;
+    padding:10px 14px;
+    border-radius:12px;
+    background:white;
+    color:var(--esp);
+    gap:6px;
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .legend.expanded::before{display:none;}
   .legend.expanded .legend-title,
-  .legend.expanded .legend-row { display: flex; }
-  .legend.expanded .legend-title { display: block; }
+  .legend.expanded .legend-row{display:flex;}
+  .legend.expanded .legend-title{display:block;}
 
-  /* List panel — hidden until user taps button */
-  .panel {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    border-left: none;
-    z-index: 90;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
-  }
-  .panel.list-open {
-    transform: translateY(0);
-  }
+  /* Locate button — smaller on mobile */
+  .locate-btn{bottom:12px;right:12px;width:42px;height:42px;font-size:18px;}
 
-  /* Floating "View list" button */
-  .view-list-fab {
-    display: flex;
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--gold);
-    color: white;
-    border: none;
-    border-radius: 50px;
-    padding: 14px 28px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    box-shadow: 0 4px 16px rgba(28,15,6,0.3);
-    z-index: 20;
-    align-items: center;
-    gap: 6px;
+  /* Shop detail / auth / friends — full screen overlays on mobile (these are deep-link views) */
+  .panel-view#view-shop,
+  .panel-view#view-auth,
+  .panel-view#view-friends{
+    position:fixed !important;
+    top:0 !important;
+    left:0 !important;
+    right:0 !important;
+    bottom:0 !important;
+    z-index:80;
+    background:var(--cream);
+    overflow-y:auto;
   }
-  .view-list-fab.hidden { display: none; }
-
-  /* Close button inside list panel */
-  .panel-close-btn {
-    display: flex;
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    background: rgba(28,15,6,0.08);
-    border: none;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 18px;
-    color: var(--esp);
-    z-index: 11;
+  /* Profile, Feed, Favorites — flow inline like Nearby (so bottom nav works) */
+  .panel-view#view-profile,
+  .panel-view#view-feed,
+  .panel-view#view-favorites{
+    position:relative !important;
+    overflow:visible !important;
   }
 
-  .sheet-handle { display: none; }
+  .sheet-handle{display:none;}
 }
+
 /* Desktop — hide all mobile-only elements */
 @media (min-width: 769px) {
+  .near-you-section{display:none !important;}
+  .bottom-nav{display:none !important;}
   .sheet-handle,
   .mobile-hamburger,
   .mobile-menu-overlay,
-  .mobile-menu { display: none !important; }
-}
-@media (min-width: 769px) {
-  .sheet-handle { display: none; }
+  .mobile-menu{display:none !important;}
 }
 </style>
 </head>
@@ -414,18 +413,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     </div>
     <button class="mobile-hamburger" onclick="openMobileMenu()" style="display:none;">☰</button>
   </div>
-<!-- Mobile "View list" button -->
-  <button class="view-list-fab" id="view-list-fab" onclick="openListPanel()" style="display:none;">☰ View list</button>
+
   <!-- Mobile side menu -->
   <div class="mobile-menu-overlay" id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
   <div class="mobile-menu" id="mobile-menu">
-    <button class="mobile-menu-close" onclick="closeMobileMenu()">✕</button>
-    <button class="mobile-menu-item" onclick="mobileNav('nearby')">⊞ Near you</button>
-    <button class="mobile-menu-item" onclick="mobileNav('feed')">◎ Activity</button>
-    <button class="mobile-menu-item" onclick="mobileNav('favorites')">★ Favorites</button>
-    <button class="mobile-menu-item" onclick="mobileNav('profile')">◉ Sign in / Profile</button>
-    <button class="mobile-menu-item" onclick="mobileNav('friends')">⚇ Friends</button>
-    <button class="mobile-menu-item gold" onclick="mobileNav('add')">+ Add shop</button>
+    <button class="mobile-menu-close" onclick="if(window.closeMobileMenu)closeMobileMenu()">✕</button>
+    <button class="mobile-menu-item" onclick="if(window.mobileNav)mobileNav('nearby')">⊞ Near you</button>
+    <button class="mobile-menu-item" onclick="if(window.mobileNav)mobileNav('feed')">◎ Activity</button>
+    <button class="mobile-menu-item" onclick="if(window.mobileNav)mobileNav('favorites')">★ Favorites</button>
+    <button class="mobile-menu-item" onclick="if(window.mobileNav)mobileNav('profile')">◉ Sign in / Profile</button>
+    <button class="mobile-menu-item" onclick="if(window.mobileNav)mobileNav('friends')">⚇ Friends</button>
+    <button class="mobile-menu-item gold" onclick="if(window.mobileNav)mobileNav('add')">+ Add shop</button>
   </div>
 
   <div class="main">
@@ -441,8 +439,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
       </div>
     </div>
 
+    <!-- NEW: NEAR YOU NOW CAROUSEL (mobile only) -->
+    <div class="near-you-section" id="near-you-section">
+      <div class="near-you-header">
+        <div class="near-you-title">Near you now</div>
+        <div class="near-you-link" onclick="showNearby()">See all →</div>
+      </div>
+      <div class="near-you-scroll" id="near-you-scroll"></div>
+    </div>
+
     <div class="panel" id="panel">
-      <button class="panel-close-btn" onclick="closeListPanel()" style="display:none;" id="panel-close-btn">✕</button>
       <!-- NEARBY VIEW (default) -->
       <div class="panel-view on" id="view-nearby">
         <div class="feed-hdr">
@@ -489,7 +495,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
         <div id="profile-hdr-area"></div>
         <div class="panel-scroll" id="profile-body"></div>
       </div>
-<!-- FRIENDS VIEW -->
+
+      <!-- FRIENDS VIEW -->
       <div class="panel-view" id="view-friends">
         <div class="feed-hdr">
           <div class="back-link" onclick="showMyProfile()">← Back to profile</div>
@@ -506,6 +513,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
           <div class="empty-state">Loading…</div>
         </div>
       </div>
+
       <!-- AUTH VIEW -->
       <div class="panel-view" id="view-auth">
         <div class="auth-panel">
@@ -526,6 +534,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
           <div class="auth-toggle" id="auth-toggle-link" onclick="toggleAuthMode()">Already have an account? <span>Sign in</span></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- NEW: BOTTOM NAV BAR (mobile only) -->
+  <div class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="bottom-nav-item active" id="bnav-home" onclick="if(window.mobileNavBottom)mobileNavBottom('home')">
+        <span class="nav-icon">⊞</span>
+        <span class="nav-label">Home</span>
+      </button>
+      <button class="bottom-nav-item" id="bnav-activity" onclick="if(window.mobileNavBottom)mobileNavBottom('activity')">
+        <span class="nav-icon">◎</span>
+        <span class="nav-label">Activity</span>
+      </button>
+      <button class="bottom-nav-item" id="bnav-favorites" onclick="if(window.mobileNavBottom)mobileNavBottom('favorites')">
+        <span class="nav-icon">★</span>
+        <span class="nav-label">Favorites</span>
+      </button>
+      <button class="bottom-nav-item" id="bnav-profile" onclick="if(window.mobileNavBottom)mobileNavBottom('profile')">
+        <span class="nav-icon">◉</span>
+        <span class="nav-label">Profile</span>
+      </button>
     </div>
   </div>
 </div>
@@ -643,6 +673,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     </button>
   </div>
 </div>
+
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
@@ -666,7 +697,6 @@ const googleProvider = new GoogleAuthProvider();
 // ── Globals ──
 const GKEY = 'AIzaSyBPKyW_DnJ3OXBu6OVOg_BcMjf9O1QUios';
 const VIBES = ['quiet','buzzy','good wifi','no wifi','outlets','natural light','cold brew','cozy','great music','standing desks','dog friendly','good espresso'];
-// Founders — usernames that get the founder tag
 const FOUNDER_USERNAMES = ['boo_sinx'];
 function isFounderName(name) {
   if (!name) return false;
@@ -683,28 +713,24 @@ let anonMode = false;
 const selectedVibes = new Set();
 let authMode = 'signup';
 let feedUnsub = null;
-let userFavorites = new Set(); // Set of shop IDs favorited by current user
-let favoriteShopsData = []; // Full data for favorited shops (for favorites list when not in nearby)
-let dismissedVerifyBanner = false; // per-session dismissal of email verify banner
-// ── Beta mode ──
+let userFavorites = new Set();
+let favoriteShopsData = [];
+let dismissedVerifyBanner = false;
 let betaMode = false;
 let betaUsername = null;
-let betaUserId = null; // fake UID for this session
+let betaUserId = null;
 
 window.welcomeSignup = function() {
   document.getElementById('welcome-screen').style.display = 'none';
   sessionStorage.setItem('stoa_welcomed', '1');
   showPanel('auth');
-  if (window.innerWidth <= 768) openListPanel();
 };
 window.welcomeSignin = function() {
   document.getElementById('welcome-screen').style.display = 'none';
   sessionStorage.setItem('stoa_welcomed', '1');
-  // Flip auth to sign-in mode
-  authMode = 'signup'; // set to opposite so toggleAuthMode flips it correctly
+  authMode = 'signup';
   toggleAuthMode();
   showPanel('auth');
-  if (window.innerWidth <= 768) openListPanel();
 };
 
 window.openBetaNameModal = function() {
@@ -721,19 +747,15 @@ window.confirmBetaName = function() {
   const input = document.getElementById('beta-name-input');
   const name = (input.value || '').trim();
   if (!name || name.length < 2) { toast('Pick a display name (2+ chars)'); return; }
-  // Store beta session
   betaMode = true;
   betaUsername = name;
   betaUserId = 'beta_' + Math.random().toString(36).substring(2, 10);
   sessionStorage.setItem('stoa_beta', JSON.stringify({name, uid: betaUserId}));
   sessionStorage.setItem('stoa_welcomed', '1');
-  // Close modals + welcome
   document.getElementById('beta-name-modal').style.display = 'none';
   document.getElementById('welcome-screen').style.display = 'none';
-  // Show banner
   document.getElementById('beta-banner').style.display = 'block';
-  document.body.style.paddingTop = '30px'; // account for banner
-  // Immediately show the free forever modal
+  document.body.style.paddingTop = '30px';
   setTimeout(openFreeForeverModal, 500);
   toast(`Welcome, ${name}! You're in beta mode ☕`);
 };
@@ -748,17 +770,13 @@ window.freeForeverContinue = function() {
 
 window.freeForeverToSignup = function() {
   document.getElementById('free-forever-modal').style.display = 'none';
-  // Mark that they were converting from beta so we can merge later
   sessionStorage.setItem('stoa_converting_from_beta', '1');
   showPanel('auth');
-  if (window.innerWidth <= 768) openListPanel();
 };
 
-// On first visit, show welcome screen (unless signed in or already seen)
 function maybeShowWelcome() {
-  if (currentUser) return; // signed in, don't show
+  if (currentUser) return;
   if (sessionStorage.getItem('stoa_welcomed')) {
-    // Check if they were in beta mode
     const beta = sessionStorage.getItem('stoa_beta');
     if (beta) {
       try {
@@ -775,13 +793,12 @@ function maybeShowWelcome() {
   const welcomeEl = document.getElementById('welcome-screen');
   if (welcomeEl) welcomeEl.style.display = 'flex';
 }
-// ── Auth state ──
+
 let friendRequestUnsub = null;
 
 onAuthStateChanged(auth, user => {
   currentUser = user;
   updateProfileBtn();
-  // Unsubscribe old listener if switching users
   if (friendRequestUnsub) { friendRequestUnsub(); friendRequestUnsub = null; }
   
   if (user) {
@@ -789,7 +806,6 @@ onAuthStateChanged(auth, user => {
     loadFavorites(user.uid);
     loadFriends(user.uid);
     loadFriendRequests(user.uid);
-    // Real-time listener for incoming friend requests
     setupFriendRequestListener(user.uid);
   } else {
     userFavorites.clear();
@@ -804,11 +820,9 @@ function setupFriendRequestListener(uid) {
   const seenRequests = new Set(incomingFriendRequests.map(r => r.fromUid));
   friendRequestUnsub = onSnapshot(collection(db, 'users', uid, 'friendRequests'), snap => {
     const current = snap.docs.map(d => ({id: d.id, ...d.data()}));
-    // Find NEW requests (not in seenRequests yet)
     current.forEach(r => {
       if (!seenRequests.has(r.fromUid)) {
         seenRequests.add(r.fromUid);
-        // Only notify if we've already loaded the initial set (avoid spam on first login)
         if (incomingFriendRequests.length || seenRequests.size > 1) {
           showFriendRequestNotif(r.fromName || 'Someone', r.fromUid);
         }
@@ -820,7 +834,6 @@ function setupFriendRequestListener(uid) {
 }
 
 function showFriendRequestNotif(fromName, fromUid) {
-  // Custom toast with action
   const notif = document.createElement('div');
   notif.style.cssText = `
     position:fixed;top:70px;right:16px;background:var(--cream);color:var(--esp);
@@ -838,12 +851,10 @@ function showFriendRequestNotif(fromName, fromUid) {
     </div>
   `;
   document.body.appendChild(notif);
-  // Auto-dismiss after 8 seconds
   setTimeout(() => { if (notif.parentElement) notif.remove(); }, 8000);
 }
 
 function updateFriendBadge() {
-  // Update profile button with badge count
   const btn = document.getElementById('tab-profile');
   if (btn && currentUser) {
     const name = currentUser.displayName || currentUser.email.split('@')[0];
@@ -877,7 +888,7 @@ function updateProfileBtn() {
     btn.textContent = '◉ Sign in';
   }
 }
-// ── Favorites ──
+
 async function loadFavorites(uid) {
   try {
     const favSnap = await getDocs(collection(db, 'users', uid, 'favorites'));
@@ -887,8 +898,8 @@ async function loadFavorites(uid) {
       userFavorites.add(d.id);
       favoriteShopsData.push({id: d.id, ...d.data()});
     });
-    // Refresh any visible lists
     renderNearbyList();
+    renderNearYouCarousel();
     const favView = document.getElementById('view-favorites');
     if (favView && favView.classList.contains('on')) renderFavoritesList();
   } catch(e) { console.log('fav load error', e); }
@@ -902,13 +913,11 @@ window.toggleFavorite = async function(shopId, event) {
   const favRef = doc(db, 'users', currentUser.uid, 'favorites', shopId);
   try {
     if (userFavorites.has(shopId)) {
-      // Remove
       await deleteDoc(favRef);
       userFavorites.delete(shopId);
       favoriteShopsData = favoriteShopsData.filter(s => s.id !== shopId);
       toast('Removed from favorites');
     } else {
-      // Add
       await setDoc(favRef, {
         name: shop.name,
         addr: shop.addr,
@@ -920,8 +929,8 @@ window.toggleFavorite = async function(shopId, event) {
       favoriteShopsData.push({id: shopId, name: shop.name, addr: shop.addr, lat: shop.lat, lng: shop.lng});
       toast('⭐ Added to favorites!');
     }
-    // Refresh UI
     renderNearbyList();
+    renderNearYouCarousel();
     const favView = document.getElementById('view-favorites');
     if (favView && favView.classList.contains('on')) renderFavoritesList();
     const shopView = document.getElementById('view-shop');
@@ -961,7 +970,6 @@ function renderFavoritesList() {
     return;
   }
   el.innerHTML = favoriteShopsData.map(s => {
-    // Try to get live occupancy data from shops array if available
     const liveShop = shops.find(x => x.id === s.id);
     const occ = liveShop ? liveShop.occ : 'moderate';
     const reports = liveShop ? liveShop.reports : 0;
@@ -982,7 +990,6 @@ function renderFavoritesList() {
   }).join('');
 }
 
-// ── Map ──
 window.initMap = function() {
   map = new google.maps.Map(document.getElementById('map'), {
     center: {lat:40.6944, lng:-73.9213},
@@ -1044,14 +1051,11 @@ function searchNearby(center) {
   }, (results, status) => {
     if (status !== google.maps.places.PlacesServiceStatus.OK || !results) return;
     clearMarkers();
-    // Only open places
     const open = results.filter(p =>
       p.business_status === 'OPERATIONAL' ||
       p.business_status === undefined
     );
     shops = open.map(p => {
-      // Use Google's user_ratings_total as a proxy for busyness
-      // High ratings count = popular = likely busier
       const ratingCount = p.user_ratings_total || 0;
       let defaultOcc = 'empty';
       if (ratingCount > 500) defaultOcc = 'full';
@@ -1063,7 +1067,7 @@ function searchNearby(center) {
         lat: p.geometry.location.lat(),
         lng: p.geometry.location.lng(),
         occ: defaultOcc,
-        googleOcc: defaultOcc, // store google estimate separately
+        googleOcc: defaultOcc,
         pct: defaultOcc==='empty'?15:defaultOcc==='moderate'?50:80,
         reports: 0,
         rating: p.rating || null,
@@ -1074,16 +1078,15 @@ function searchNearby(center) {
     });
     userShops.forEach(us => { if (!shops.find(s=>s.id===us.id)) shops.push(us); });
     shops.forEach(s => dropMarker(s));
-    loadOccupancyFromFirestore(); // this will override with real user data
+    loadOccupancyFromFirestore();
     renderNearbyList();
+    renderNearYouCarousel();
     listenFeed();
   });
 }
 
-// ── Load real occupancy from Firestore (no composite index needed) ──
 async function loadOccupancyFromFirestore() {
   try {
-    // Pull all recent checkins in one query - no orderBy+where combo needed
     const snap = await getDocs(query(collection(db,'checkins'), limit(200)));
     const byShop = {};
     snap.docs.forEach(d => {
@@ -1094,7 +1097,6 @@ async function loadOccupancyFromFirestore() {
     shops.forEach(shop => {
       const shopCheckins = byShop[shop.id];
       if (shopCheckins && shopCheckins.length) {
-        // Sort by createdAt descending to get latest
         shopCheckins.sort((a,b) => {
           const ta = a.createdAt?.toMillis?.() || 0;
           const tb = b.createdAt?.toMillis?.() || 0;
@@ -1108,6 +1110,7 @@ async function loadOccupancyFromFirestore() {
     clearMarkers();
     shops.forEach(s => dropMarker(s));
     renderNearbyList();
+    renderNearYouCarousel();
   } catch(e) { console.log('occ load error', e); }
 }
 
@@ -1137,10 +1140,10 @@ function dropMarker(shop) {
   marker.addListener('click', ()=>showShop(shop.id));
   markers.push(marker);
 }
-// ── Friends + nearby helpers ──
-let userFriends = new Set(); // UIDs of current user's friends
-let incomingFriendRequests = []; // pending requests others sent me
-let outgoingFriendRequests = new Set(); // UIDs I've sent requests to
+
+let userFriends = new Set();
+let incomingFriendRequests = [];
+let outgoingFriendRequests = new Set();
 
 async function loadFriends(uid) {
   if (!uid) { userFriends.clear(); return; }
@@ -1154,18 +1157,14 @@ async function loadFriends(uid) {
 async function loadFriendRequests(uid) {
   if (!uid) return;
   try {
-    // Incoming — requests sent TO me
     const incomingSnap = await getDocs(collection(db, 'users', uid, 'friendRequests'));
     incomingFriendRequests = incomingSnap.docs.map(d => ({id: d.id, ...d.data()}));
-    
-    // Outgoing — requests I sent
     const outgoingSnap = await getDocs(collection(db, 'users', uid, 'sentRequests'));
     outgoingFriendRequests.clear();
     outgoingSnap.docs.forEach(d => outgoingFriendRequests.add(d.id));
   } catch(e) { console.log('friend requests load error', e); }
 }
 
-// Search users by displayName (case-insensitive starts-with)
 window.searchUsers = async function(queryStr) {
   if (!queryStr || queryStr.length < 2) return [];
   try {
@@ -1174,7 +1173,7 @@ window.searchUsers = async function(queryStr) {
     return snap.docs
       .map(d => ({id: d.id, ...d.data()}))
       .filter(u => {
-        if (u.id === currentUser?.uid) return false; // exclude self
+        if (u.id === currentUser?.uid) return false;
         const name = (u.displayName || '').toLowerCase();
         const email = (u.email || '').toLowerCase();
         return name.includes(lowerQ) || email.includes(lowerQ);
@@ -1183,7 +1182,6 @@ window.searchUsers = async function(queryStr) {
   } catch(e) { console.log('user search error', e); return []; }
 };
 
-// Send a friend request
 window.sendFriendRequest = async function(toUid, toName) {
   if (!currentUser) { toast('Sign in first!'); return; }
   if (toUid === currentUser.uid) return;
@@ -1192,13 +1190,11 @@ window.sendFriendRequest = async function(toUid, toName) {
   try {
     const fromName = currentUser.displayName || currentUser.email.split('@')[0];
     const batch = writeBatch(db);
-    // In recipient's inbox
     batch.set(doc(db, 'users', toUid, 'friendRequests', currentUser.uid), {
       fromUid: currentUser.uid,
       fromName,
       createdAt: serverTimestamp(),
     });
-    // In my sent list
     batch.set(doc(db, 'users', currentUser.uid, 'sentRequests', toUid), {
       toUid,
       toName,
@@ -1215,24 +1211,20 @@ window.sendFriendRequest = async function(toUid, toName) {
   }
 };
 
-// Accept a friend request
 window.acceptFriendRequest = async function(fromUid, fromName) {
   if (!currentUser) return;
   try {
     const myName = currentUser.displayName || currentUser.email.split('@')[0];
     const batch = writeBatch(db);
-    // Add to both friend lists
     batch.set(doc(db, 'users', currentUser.uid, 'friends', fromUid), {
       uid: fromUid, displayName: fromName, addedAt: serverTimestamp(),
     });
     batch.set(doc(db, 'users', fromUid, 'friends', currentUser.uid), {
       uid: currentUser.uid, displayName: myName, addedAt: serverTimestamp(),
     });
-    // Remove the request from both sides
     batch.delete(doc(db, 'users', currentUser.uid, 'friendRequests', fromUid));
     batch.delete(doc(db, 'users', fromUid, 'sentRequests', currentUser.uid));
     await batch.commit();
-    
     userFriends.add(fromUid);
     incomingFriendRequests = incomingFriendRequests.filter(r => r.fromUid !== fromUid);
     toast(`You and ${fromName} are now friends! 🤝`);
@@ -1244,7 +1236,6 @@ window.acceptFriendRequest = async function(fromUid, fromName) {
   }
 };
 
-// Reject a friend request
 window.rejectFriendRequest = async function(fromUid) {
   if (!currentUser) return;
   try {
@@ -1261,7 +1252,6 @@ window.rejectFriendRequest = async function(fromUid) {
   }
 };
 
-// Remove a friend (unfriend)
 window.removeFriend = async function(friendUid) {
   if (!currentUser) return;
   try {
@@ -1277,6 +1267,7 @@ window.removeFriend = async function(friendUid) {
     return false;
   }
 };
+
 function getMapCenterCoords() {
   if (!map) return null;
   const c = map.getCenter();
@@ -1286,19 +1277,17 @@ function getMapCenterCoords() {
 function isCheckinNearby(checkin) {
   const center = getMapCenterCoords();
   if (!center || !checkin.shopId) return false;
-  // Find shop in current shops array
   const shop = shops.find(s => s.id === checkin.shopId);
   if (!shop) return false;
   const dist = getDistanceMeters(center.lat, center.lng, shop.lat, shop.lng);
-  return dist <= 3200; // ~2 miles
+  return dist <= 3200;
 }
-// ── Live feed from Firestore (simple query, no composite index) ──
+
 function listenFeed() {
   if (feedUnsub) feedUnsub();
   const q = query(collection(db, 'checkins'), limit(60));
   feedUnsub = onSnapshot(q, snap => {
     let items = snap.docs.map(d => ({id:d.id, ...d.data()}));
-    // Sort client-side to avoid needing index
     items.sort((a,b) => {
       const ta = a.createdAt?.toMillis?.() || 0;
       const tb = b.createdAt?.toMillis?.() || 0;
@@ -1306,7 +1295,6 @@ function listenFeed() {
     });
     items = items.slice(0,40);
     renderFeedItems(items);
-    // Update shop occupancy using algorithm
     const byShop = {};
     items.forEach(item => {
       if (!byShop[item.shopId]) byShop[item.shopId] = [];
@@ -1326,20 +1314,19 @@ function listenFeed() {
     clearMarkers();
     shops.forEach(s=>dropMarker(s));
     renderNearbyList();
+    renderNearYouCarousel();
   });
 }
 
 function renderFeedItems(items) {
   const el = document.getElementById('feed-items');
-  
-  // FILTER: friends always show (anywhere) + strangers only if nearby
   const filtered = items.filter(item => {
     const myId = currentUser?.uid || betaUserId;
     const isMe = myId && item.userId === myId;
-    if (isMe) return true; // always show own check-ins
+    if (isMe) return true;
     const isFriend = currentUser && userFriends.has(item.userId);
-    if (isFriend) return true; // friends show anywhere
-    return isCheckinNearby(item); // strangers only if nearby
+    if (isFriend) return true;
+    return isCheckinNearby(item);
   });
   
   if (!filtered.length) {
@@ -1351,7 +1338,6 @@ function renderFeedItems(items) {
     const isAnon = item.anonymous;
     const isMe = currentUser && item.userId === currentUser.uid;
     const isFriend = currentUser && userFriends.has(item.userId);
-    // STRANGERS get anonymized names
     const showRealName = isAnon ? false : (isMe || isFriend);
     const displayName = isAnon ? 'anonymous' : (showRealName ? (item.userDisplayName || 'someone') : 'a user');
     const initials = isAnon || !showRealName ? '?' : displayName.slice(0,2).toUpperCase();
@@ -1374,35 +1360,23 @@ function renderFeedItems(items) {
   }).join('');
 }
 
-// ── Reliable open-now check using period data directly ──
-// The native isOpen() method has known bugs; this checks periods manually.
-// Returns: true = open, false = closed, null = unknown/24-hour/missing data
 function isShopOpenNow(openingHours) {
-  if (!openingHours || !openingHours.periods || !openingHours.periods.length) {
-    return null; // no data — treat as unknown (don't block check-ins)
-  }
+  if (!openingHours || !openingHours.periods || !openingHours.periods.length) return null;
   const now = new Date();
-  const today = now.getDay(); // 0=Sunday, 1=Monday...
+  const today = now.getDay();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-  // If a period has open but no close, it means 24 hours
   for (const period of openingHours.periods) {
     if (period.open && !period.close) return true;
   }
-
-  // Check each period — a period might span midnight (close.day > open.day or next day)
   for (const period of openingHours.periods) {
     if (!period.open || !period.close) continue;
     const openDay = period.open.day;
     const closeDay = period.close.day;
     const openMin = period.open.hours * 60 + period.open.minutes;
     const closeMin = period.close.hours * 60 + period.close.minutes;
-
-    // Same-day period (e.g. Mon 7am - Mon 6pm)
     if (openDay === closeDay) {
       if (today === openDay && nowMinutes >= openMin && nowMinutes < closeMin) return true;
     } else {
-      // Period spans midnight (e.g. Fri 10pm - Sat 2am)
       if (today === openDay && nowMinutes >= openMin) return true;
       if (today === closeDay && nowMinutes < closeMin) return true;
     }
@@ -1410,22 +1384,22 @@ function isShopOpenNow(openingHours) {
   return false;
 }
 
-// ── Show shop ──
 window.showShop = function(id) {
-  // No guest gate — users pick Sign up or Beta on welcome screen
   currentShopId = id;
   const s = shops.find(x=>x.id===id);
   if (!s) return;
   showPanel('shop');
   setActiveTab(null);
-  // On mobile, slide up the panel so user can see the shop details
+  
+  // Scroll main to top on mobile so the shop overlay shows from top
   if (window.innerWidth <= 768) {
-    openListPanel();
+    const main = document.querySelector('.main');
+    if (main) main.scrollTop = 0;
   }
+  
   const color = occColor(s.occ);
   const isEstimate = s.googleDefault !== false;
   
-  // Scroll to top when opening a shop
   const shopScroll = document.getElementById('shop-scroll');
   if (shopScroll) shopScroll.scrollTop = 0;
 
@@ -1464,9 +1438,8 @@ window.showShop = function(id) {
     let reviewsHTML = '';
 
     if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-      // Reliable open/closed check using periods directly
       const openState = isShopOpenNow(place.opening_hours);
-      s.isClosed = openState === false; // only true when we're confident it's closed
+      s.isClosed = openState === false;
 
       const statusEl = document.getElementById('shop-open-status');
       if (statusEl && openState !== null) {
@@ -1485,7 +1458,6 @@ window.showShop = function(id) {
         renderNearbyList();
       }
 
-      // Photos strip
       if (place.photos && place.photos.length) {
         const photoUrls = place.photos.slice(0,6).map(p => p.getUrl({maxWidth:320,maxHeight:220}));
         const photosEl = document.getElementById('shop-photos');
@@ -1496,7 +1468,6 @@ window.showShop = function(id) {
         }
       }
 
-      // Google reviews
       if (place.reviews && place.reviews.length) {
         reviewsHTML = `
           <div class="sec-label">Google reviews</div>
@@ -1521,7 +1492,6 @@ window.showShop = function(id) {
       body.innerHTML = `<div id="recent-activity-section"></div>`;
     }
 
-    // Live STOA check-ins for this shop
     const q = query(collection(db,'checkins'), where('shopId','==',id), limit(20));
     onSnapshot(q, snap => {
       let items = snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -1557,7 +1527,6 @@ window.showShop = function(id) {
   });
 };
 
-// ── Nearby list ──
 function renderNearbyList() {
   const el = document.getElementById('nearby-list');
   if (!el) return;
@@ -1565,7 +1534,7 @@ function renderNearbyList() {
   el.innerHTML = shops.slice(0,20).map(s => {
     const color = occColor(s.occ);
     const cap = s.occ.charAt(0).toUpperCase()+s.occ.slice(1);
-    const isClosed = s.isClosed === true; // only true if explicitly confirmed closed by Places API
+    const isClosed = s.isClosed === true;
     const isFav = userFavorites.has(s.id);
     return `<div class="nearby-row" onclick="showShop('${s.id}')" style="${isClosed?'opacity:0.45;':''}">
       <div class="nearby-icon">☕</div>
@@ -1585,20 +1554,61 @@ function renderNearbyList() {
   }).join('');
 }
 
+// ── NEW: Near You Now carousel ──
+function renderNearYouCarousel() {
+  const el = document.getElementById('near-you-scroll');
+  if (!el) return;
+  if (!shops.length) { el.innerHTML = ''; return; }
+  
+  // Sort: shops with user reports first, then by occupancy (empty/moderate before full)
+  const sorted = [...shops].sort((a, b) => {
+    if (b.reports !== a.reports) return b.reports - a.reports;
+    const occOrder = { empty: 0, moderate: 1, full: 2 };
+    return (occOrder[a.occ] || 1) - (occOrder[b.occ] || 1);
+  }).slice(0, 8);
+  
+  const gradients = [
+    'linear-gradient(135deg, #E8D5BC 0%, #C8922A 100%)',
+    'linear-gradient(135deg, #D4E6C3 0%, #5C7A5F 100%)',
+    'linear-gradient(135deg, #F5EDE0 0%, #B5511A 100%)',
+    'linear-gradient(135deg, #c9d8e8 0%, #4A90D9 100%)',
+  ];
+  
+  el.innerHTML = sorted.map(s => {
+    const color = occColor(s.occ);
+    const pct = s.pct;
+    const badgeBg = s.occ === 'empty' ? '#5C7A5F' : s.occ === 'moderate' ? '#C8922A' : '#B5511A';
+    const checkins = s.reports || 0;
+    const bgStyle = gradients[Math.abs(s.name.charCodeAt(0)) % gradients.length];
+    
+    return `<div class="near-you-card" onclick="showShop('${s.id}')">
+      <div class="near-you-card-img" style="background:${bgStyle};">
+        <div class="near-you-card-badge" style="background:${badgeBg};">${pct}%</div>
+      </div>
+      <div class="near-you-card-body">
+        <div class="near-you-card-name">${s.name}</div>
+        <div class="near-you-card-meta">
+          <span style="color:${color};">●</span>
+          ${checkins > 0 ? checkins + ' checked in' : 'Est. ' + s.occ}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 window.showNearby = function() {
   showPanel('nearby');
   setActiveTab('tab-nearby');
   renderNearbyList();
+  renderNearYouCarousel();
 };
 
-// ── Feed view ──
 window.showFeed = function() {
   showPanel('feed');
   setActiveTab('tab-feed');
   listenFeed();
 };
 
-// ── Profile ──
 window.showMyProfile = function() {
   if (!currentUser) { showPanel('auth'); setActiveTab('tab-profile'); return; }
   showPanel('profile');
@@ -1616,7 +1626,6 @@ async function renderProfile(uid, name, isMe) {
   const initials = name.slice(0,2).toUpperCase();
   const color = stringToColor(uid);
   const showFounder = isFounderName(name);
-  // Fetch user data for points/badges
   let userData = {};
   try {
     const uSnap = await getDoc(doc(db,'users',uid));
@@ -1678,13 +1687,11 @@ async function renderProfile(uid, name, isMe) {
     </div>` : ''}
   `;
 
-  // Fetch check-in history
   try {
     const q = query(collection(db,'checkins'), where('userId','==',uid), limit(50));
     const snap = await getDocs(q);
     const items = snap.docs.map(d=>({id:d.id,...d.data()}));
     
-    // Fetch favorites for this user (if viewing own profile, use cached; otherwise fetch)
     let profileFavorites = [];
     if (isMe) {
       profileFavorites = favoriteShopsData;
@@ -1727,7 +1734,6 @@ async function renderProfile(uid, name, isMe) {
   }
 }
 
-// ── Check in ──
 window.openCI = function(shopId) {
   if (!currentUser && !betaMode) { showPanel('auth'); toast('Sign in to check in!'); return; }
   const shopForCI = shopId ? shops.find(x=>x.id===shopId) : null;
@@ -1736,7 +1742,6 @@ window.openCI = function(shopId) {
   const s = shopId ? shops.find(x=>x.id===shopId) : null;
   document.getElementById('ci-title').textContent = s ? `Check in at ${s.name}` : 'Check in';
   document.getElementById('ci-sub').textContent = s ? s.addr : 'Report what you see right now';
-  // Check location — MUST be at shop to check in
   if (s) {
     checkUserLocation(s).then(loc => {
       const subEl = document.getElementById('ci-sub');
@@ -1769,7 +1774,6 @@ function renderVibes(){ document.getElementById('vibe-grid').innerHTML=VIBES.map
 window.toggleVibe = function(el,tag){ selectedVibes.has(tag)?(selectedVibes.delete(tag),el.classList.remove('on')):(selectedVibes.add(tag),el.classList.add('on')); };
 window.toggleAnon = function(){ anonMode=!anonMode; document.getElementById('anon-sw').classList.toggle('on',anonMode); };
 
-// ── Geofencing ──
 function getDistanceMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const dLat = (lat2-lat1)*Math.PI/180;
@@ -1792,7 +1796,6 @@ async function checkUserLocation(shop) {
   });
 }
 
-// ── Points & Badges ──
 const BADGES = [
   {id:'regular', icon:'☕', name:'Regular', desc:'10 total check-ins', check: s => s.totalCheckins >= 10},
   {id:'explorer', icon:'🗺️', name:'Explorer', desc:'Checked in at 10 different shops', check: s => s.uniqueShops >= 10},
@@ -1807,17 +1810,12 @@ async function awardPoints(userId, shopId, checkinTime) {
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
     const userData = userSnap.exists() ? userSnap.data() : {};
-    
     const today = new Date().toDateString();
     const todayPoints = userData.todayPoints || 0;
     const todayDate = userData.todayDate || '';
     const shopsToday = userData.shopsToday || [];
-    
-    // Reset daily if new day
     const currentTodayPoints = todayDate === today ? todayPoints : 0;
     const currentShopsToday = todayDate === today ? shopsToday : [];
-    
-    // Check if can earn points
     const canEarn = currentTodayPoints < 5 && !currentShopsToday.includes(shopId);
     
     if (canEarn) {
@@ -1829,13 +1827,9 @@ async function awardPoints(userId, shopId, checkinTime) {
       const hour = new Date(checkinTime).getHours();
       const earlyBird = userData.earlyBird || hour < 9;
       const nightOwl = userData.nightOwl || hour >= 20;
-      
-      // Track same-shop count
       const shopCounts = userData.shopCounts || {};
       shopCounts[shopId] = (shopCounts[shopId] || 0) + 1;
       const maxSameShop = Math.max(...Object.values(shopCounts));
-      
-      // Check badges
       const stats = {totalCheckins, uniqueShops, earlyBird, nightOwl, maxSameShop};
       const earnedBadges = BADGES.filter(b => b.check(stats)).map(b => b.id);
       const prevBadges = userData.badges || [];
@@ -1866,55 +1860,39 @@ async function awardPoints(userId, shopId, checkinTime) {
   } catch(e) { console.log('points error', e); return {pointsEarned:0}; }
 }
 
-// ── Occupancy algorithm ──
 function computeOccupancy(checkins, googleOcc) {
   const now = Date.now();
-  const validMs = 45 * 60 * 1000; // 45 mins
+  const validMs = 45 * 60 * 1000;
   const twoHours = 2 * 60 * 60 * 1000;
-  
   const valid = checkins.filter(c => {
     const t = c.createdAt?.toMillis?.() || 0;
     return (now - t) < validMs;
   });
-  
   if (!valid.length) {
-    // Check if any check-ins in last 2 hours
     const recent = checkins.filter(c => {
       const t = c.createdAt?.toMillis?.() || 0;
       return (now - t) < twoHours;
     });
     if (!recent.length) return {occ: googleOcc, source:'google'};
-    // Use most recent within 2 hours
     const latest = recent.sort((a,b) => (b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0))[0];
     return {occ: latest.occ, source:'user', count:1};
   }
-  
-  // Count votes
   const counts = {empty:0, moderate:0, full:0};
   const verifiedFull = valid.filter(c => c.verified && c.occ === 'full').length;
   valid.forEach(c => counts[c.occ] = (counts[c.occ]||0) + 1);
-  
-  // Full only if 3+ verified reports
   if (verifiedFull >= 3) return {occ:'full', source:'user', count:verifiedFull};
-  
-  // 3-way tie or no clear winner → google
   if (counts.empty > 0 && counts.moderate > 0 && counts.full > 0) {
     return {occ: googleOcc, source:'google'};
   }
-  
-  // Majority wins for empty/moderate (1+ person)
   if (counts.empty > counts.moderate && counts.empty > counts.full) {
     return {occ:'empty', source:'user', count:counts.empty};
   }
   if (counts.moderate >= counts.empty && counts.moderate > counts.full) {
     return {occ:'moderate', source:'user', count:counts.moderate};
   }
-  
-  // Not enough verified for full → show google estimate
   if (counts.full > 0 && verifiedFull < 3) {
     return {occ: googleOcc, source:'google', note:'Needs 3+ verified reports for full'};
   }
-  
   return {occ: googleOcc, source:'google'};
 }
 
@@ -1934,7 +1912,6 @@ window.submitCI = async function() {
   const displayName = currentUser ? (currentUser.displayName || currentUser.email.split('@')[0]) : betaUsername;
 
   try {
-    // Check geofencing
     let verified = false;
     let locationNote = '';
     if (shop) {
@@ -1949,7 +1926,6 @@ window.submitCI = async function() {
       }
     }
 
-    // Block ALL unverified check-ins (must be at the shop)
     if (!verified) {
       toast('You need to be at the shop to check in — helps keep it accurate! ☕');
       btn.innerHTML = 'Submit check-in';
@@ -1957,7 +1933,6 @@ window.submitCI = async function() {
       return;
     }
 
-    // Rate limit: 30 min cooldown per user per shop
     if (shop) {
       try {
         const recentQ = query(
@@ -1989,7 +1964,7 @@ window.submitCI = async function() {
       userId: currentUser?.uid || betaUserId,
       userDisplayName: anonMode ? null : (currentUser ? displayName : betaUsername),
       anonymous: anonMode,
-      isBeta: !currentUser && betaMode, // flag beta check-ins
+      isBeta: !currentUser && betaMode,
       shopId: shopId || 'unknown',
       shopName: shop ? shop.name : 'Unknown',
       shopAddr: shop ? shop.addr : '',
@@ -2001,16 +1976,15 @@ window.submitCI = async function() {
     };
     await addDoc(collection(db,'checkins'), checkinData);
     
-    // Award points (only for real users, not beta)
     const pointsResult = currentUser ? await awardPoints(currentUser.uid, shopId, Date.now()) : {pointsEarned:0, totalPoints:0};
     
-    // Update shop locally
     if (shop) {
       shop.googleDefault = false;
       shop.reports = (shop.reports||0) + 1;
       clearMarkers();
       shops.forEach(s=>dropMarker(s));
       renderNearbyList();
+      renderNearYouCarousel();
     }
     document.getElementById('ci-overlay').classList.remove('open');
     
@@ -2030,7 +2004,6 @@ window.submitCI = async function() {
   }
 };
 
-// ── Add shop ──
 window.openAdd = function() {
   if (!currentUser) { showPanel('auth'); toast('Sign in to add a shop!'); return; }
   document.getElementById('add-overlay').classList.add('open');
@@ -2053,7 +2026,6 @@ window.submitAdd = async function() {
       userShops.push(shop); shops.push(shop);
       dropMarker(shop);
 
-      // Save to Firestore
       try {
         await addDoc(collection(db,'user_shops'), {
           name, addr, lat:loc.lat(), lng:loc.lng(),
@@ -2070,14 +2042,12 @@ window.submitAdd = async function() {
   });
 };
 
-// ── Auth ──
 window.toggleAuthMode = function() {
   authMode = authMode==='signup'?'signin':'signup';
   document.getElementById('auth-title').textContent = authMode==='signup'?'Join STOA':'Welcome back';
   document.getElementById('auth-submit-btn').textContent = authMode==='signup'?'Create account':'Sign in';
   const nameField = document.getElementById('auth-name');
   if(nameField) nameField.style.display = authMode==='signup'?'block':'none';
-  // Show forgot password only on sign-in mode
   const forgot = document.getElementById('forgot-link');
   if (forgot) forgot.style.display = authMode==='signin'?'block':'none';
   document.getElementById('auth-toggle-link').innerHTML = authMode==='signup'?'Already have an account? <span>Sign in</span>':'New here? <span>Create account</span>';
@@ -2086,7 +2056,6 @@ window.toggleAuthMode = function() {
   document.getElementById('auth-pass').value='';
 };
 
-// Send password reset email
 window.sendPasswordReset = async function() {
   const email = document.getElementById('auth-email').value.trim();
   if (!email) { showAuthError('Enter your email above, then tap "Forgot password?" again'); return; }
@@ -2137,7 +2106,6 @@ window.submitAuth = async function() {
       if(!name){ showAuthError('Please enter a display name'); btn.textContent='Create account'; btn.disabled=false; return; }
       const cred = await createUserWithEmailAndPassword(auth,email,pass);
       await updateProfile(cred.user,{displayName:name});
-      // Send email verification (non-blocking — don't fail signup if this fails)
       try { await sendEmailVerification(cred.user); } catch(e) { console.log('verify email send failed', e); }
       showFeed();
       toast('Welcome to STOA! Check your email to verify ☕');
@@ -2187,7 +2155,6 @@ window.signOutUser = async function() {
   toast('Signed out!');
 };
 
-// ── Helpers ──
 function showPanel(id){ 
   document.querySelectorAll('.panel-view').forEach(v=>{
     v.classList.remove('on');
@@ -2202,18 +2169,16 @@ function occColor(l){ return l==='empty'?'#5C7A5F':l==='moderate'?'#C8922A':'#B5
 function occPct(l){ return l==='empty'?Math.floor(Math.random()*22+5):l==='moderate'?Math.floor(Math.random()*28+42):Math.floor(Math.random()*13+82); }
 function stringToColor(str){ let h=0; for(let i=0;i<str.length;i++){h=str.charCodeAt(i)+((h<<5)-h);} const colors=['#C8922A','#5C7A5F','#B5511A','#6A7FAA','#8A6AAA','#6A8A7A','#AA6A6A']; return colors[Math.abs(h)%colors.length]; }
 function timeAgo(date){ const s=Math.floor((new Date()-date)/1000); if(s<60) return 'just now'; if(s<3600) return Math.floor(s/60)+' min ago'; if(s<86400) return Math.floor(s/3600)+' hr ago'; return Math.floor(s/86400)+' days ago'; }
-// ── Friends UI ──
+
 let friendSearchTimeout = null;
 
 window.showFriends = async function() {
   if (!currentUser) { showPanel('auth'); return; }
-  // Reload fresh data
   await loadFriends(currentUser.uid);
   await loadFriendRequests(currentUser.uid);
   showPanel('friends');
   setActiveTab(null);
   renderFriendsBody();
-  // Clear search input
   const si = document.getElementById('friend-search-input');
   if (si) si.value = '';
 };
@@ -2221,10 +2186,7 @@ window.showFriends = async function() {
 function renderFriendsBody() {
   const el = document.getElementById('friends-body');
   if (!el) return;
-  
   let html = '';
-  
-  // Pending requests section
   if (incomingFriendRequests.length) {
     html += `<div class="sec-label">Pending requests (${incomingFriendRequests.length})</div>`;
     html += incomingFriendRequests.map(r => {
@@ -2243,19 +2205,13 @@ function renderFriendsBody() {
       </div>`;
     }).join('');
   }
-  
-  // Current friends
   html += `<div class="sec-label">Your friends (${userFriends.size})</div>`;
   if (!userFriends.size) {
     html += `<div class="empty-state" style="padding:24px 20px;">No friends yet.<br>Search above to find people you know.</div>`;
   } else {
-    // We need to fetch friend details
     html += '<div id="friends-list-area"><div class="empty-state" style="padding:16px;">Loading friends…</div></div>';
   }
-  
   el.innerHTML = html;
-  
-  // Load friend details if we have friends
   if (userFriends.size) loadFriendsList();
 }
 
@@ -2289,7 +2245,7 @@ window.handleFriendSearch = function(value) {
     const el = document.getElementById('friends-body');
     if (!el) return;
     if (!value || value.length < 2) {
-      renderFriendsBody(); // show default view
+      renderFriendsBody();
       return;
     }
     el.innerHTML = '<div class="empty-state" style="padding:20px;">Searching…</div>';
@@ -2327,7 +2283,6 @@ window.handleFriendSearch = function(value) {
 window.handleSendRequest = async function(uid, name) {
   const success = await sendFriendRequest(uid, name);
   if (success) {
-    // Re-run current search to show "Request sent"
     const input = document.getElementById('friend-search-input');
     if (input && input.value) handleFriendSearch(input.value);
   }
@@ -2348,6 +2303,7 @@ window.handleRemoveFriend = async function(friendUid, friendName) {
   const success = await removeFriend(friendUid);
   if (success) renderFriendsBody();
 };
+
 window.showSignupGate = function() {
   document.getElementById('gate-overlay').classList.add('open');
 };
@@ -2360,21 +2316,10 @@ window.closeGateOutside = function(e) {
 window.gateToSignup = function() {
   closeGate();
   showPanel('auth');
-  if (window.innerWidth <= 768) openListPanel();
 };
 window.toast = function(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); };
-// ── Mobile menu + bottom sheet ──
-let sheetState = 'low'; // low | mid | high
-window.cycleSheet = function() {
-  const panel = document.getElementById('panel');
-  if (!panel) return;
-  // Cycle: low → mid → high → low
-  const next = sheetState === 'low' ? 'mid' : sheetState === 'mid' ? 'high' : 'low';
-  panel.classList.remove('sheet-low', 'sheet-mid', 'sheet-high');
-  panel.classList.add('sheet-' + next);
-  sheetState = next;
-};
 
+// ── Mobile menu ──
 window.openMobileMenu = function() {
   document.getElementById('mobile-menu').classList.add('open');
   document.getElementById('mobile-menu-overlay').classList.add('open');
@@ -2386,10 +2331,6 @@ window.closeMobileMenu = function() {
 
 window.mobileNav = function(dest) {
   closeMobileMenu();
-  // Open the list panel first on mobile so views are visible
-  if (window.innerWidth <= 768) {
-    openListPanel();
-  }
   setTimeout(() => {
     if (dest === 'nearby') showNearby();
     else if (dest === 'feed') showFeed();
@@ -2404,32 +2345,37 @@ window.toggleLegend = function() {
   document.querySelector('.legend')?.classList.toggle('expanded');
 };
 
-window.openListPanel = function() {
-  document.getElementById('panel')?.classList.add('list-open');
-  document.getElementById('view-list-fab').style.display = 'none';
-  document.getElementById('panel-close-btn').style.display = 'flex';
-};
-window.closeListPanel = function() {
-  document.getElementById('panel')?.classList.remove('list-open');
-  if (window.innerWidth <= 768) {
-    document.getElementById('view-list-fab').style.display = 'flex';
-  }
-  document.getElementById('panel-close-btn').style.display = 'none';
+// ── NEW: Bottom nav ──
+window.mobileNavBottom = function(dest) {
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('bnav-' + dest);
+  if (btn) btn.classList.add('active');
+  const main = document.querySelector('.main');
+  if (main && window.innerWidth <= 768) main.scrollTop = 0;
+  if (dest === 'home') showNearby();
+  else if (dest === 'activity') showFeed();
+  else if (dest === 'favorites') showFavorites();
+  else if (dest === 'profile') showMyProfile();
 };
 
 // Show mobile UI elements
-if (window.innerWidth <= 768) {
-  const hamburger = document.querySelector('.mobile-hamburger');
-  if (hamburger) hamburger.style.display = 'flex';
-  const fab = document.getElementById('view-list-fab');
-  if (fab) fab.style.display = 'flex';
-  const legend = document.querySelector('.legend');
-  if (legend) legend.onclick = toggleLegend;
+function setupMobileUI() {
+  if (window.innerWidth <= 768) {
+    const hamburger = document.querySelector('.mobile-hamburger');
+    if (hamburger) hamburger.style.display = 'flex';
+    const legend = document.querySelector('.legend');
+    if (legend) legend.onclick = toggleLegend;
+  } else {
+    const hamburger = document.querySelector('.mobile-hamburger');
+    if (hamburger) hamburger.style.display = 'none';
+  }
 }
-// Clear beta session on tab close (data wipes)
+setupMobileUI();
+window.addEventListener('resize', setupMobileUI);
+
+// Clear beta session on tab close
 window.addEventListener('beforeunload', async () => {
   if (betaMode && betaUserId) {
-    // Attempt to delete this session's beta check-ins (best effort)
     try {
       const q = query(collection(db, 'checkins'), where('userId', '==', betaUserId), limit(50));
       const snap = await getDocs(q);
@@ -2439,9 +2385,8 @@ window.addEventListener('beforeunload', async () => {
   }
 });
 
-// Show welcome screen on first load
 setTimeout(maybeShowWelcome, 300);
-  // ── Locate me button ──
+
 window.zoomToMe = function() {
   const btn = document.querySelector('.locate-btn');
   if (!navigator.geolocation) { toast('Location not available on this device'); return; }
@@ -2464,6 +2409,7 @@ window.zoomToMe = function() {
     {enableHighAccuracy: true, timeout: 8000}
   );
 };
+
 // ── Boot ──
 const s = document.createElement('script');
 s.src = `https://maps.googleapis.com/maps/api/js?key=${GKEY}&libraries=places&callback=initMap`;
