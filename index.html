@@ -275,17 +275,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     padding-bottom:70px; /* space for bottom nav */
   }
 
-  /* MAP — compact, height adjustable via drag handle */
+  /* MAP — compact, drag handle adjusts height */
   .map-wrap{
     position:relative !important;
     width:100% !important;
-    height:var(--map-height, 38vh) !important;
-    min-height:120px;
-    max-height:80vh;
+    height:38vh !important;
+    min-height:220px;
     flex-shrink:0;
     border-radius:0 0 16px 16px;
     overflow:hidden;
-    transition:height 0.2s ease;
+  }
+  .map-wrap.expanded{
+    height:65vh !important;
   }
   
   /* DRAG HANDLE between map and content */
@@ -293,14 +294,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     display:flex;
     align-items:center;
     justify-content:center;
-    height:22px;
+    height:24px;
     background:var(--cream);
-    cursor:ns-resize;
-    touch-action:none;
+    cursor:pointer;
     flex-shrink:0;
     position:relative;
     z-index:5;
-    margin-top:-8px;
+    margin-top:-10px;
     border-radius:16px 16px 0 0;
   }
   .map-resize-handle::before{
@@ -308,18 +308,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
     width:42px;
     height:5px;
     border-radius:3px;
-    background:#C0B4A8;
-    transition:background 0.15s;
-  }
-  .map-resize-handle:hover::before,
-  .map-resize-handle:active::before{
     background:var(--gold);
-  }
-  .map-resize-handle.dragging{
-    transition:none;
-  }
-  .map-wrap.dragging{
-    transition:none;
   }
 
   /* PANEL — flows naturally in column, always visible */
@@ -2434,58 +2423,24 @@ function updateCarouselTitle() {
   }
 }
 
-// ── NEW: Map drag-to-resize handle ──
+// ── NEW: Tap drag handle to expand/collapse map ──
 function setupMapResize() {
   const handle = document.getElementById('map-resize-handle');
   const mapWrap = document.querySelector('.map-wrap');
   if (!handle || !mapWrap) return;
   
-  let isDragging = false;
-  let startY = 0;
-  let startHeight = 0;
-  
-  function getTouchY(e) {
-    return e.touches ? e.touches[0].clientY : e.clientY;
-  }
-  
-  function startDrag(e) {
+  handle.addEventListener('click', () => {
     if (window.innerWidth > 768) return;
-    isDragging = true;
-    startY = getTouchY(e);
-    startHeight = mapWrap.offsetHeight;
-    handle.classList.add('dragging');
-    mapWrap.classList.add('dragging');
-    e.preventDefault();
-  }
-  
-  function onDrag(e) {
-    if (!isDragging) return;
-    const currentY = getTouchY(e);
-    const delta = currentY - startY;
-    const newHeight = Math.max(120, Math.min(window.innerHeight * 0.8, startHeight + delta));
-    document.documentElement.style.setProperty('--map-height', newHeight + 'px');
-    e.preventDefault();
-  }
-  
-  function endDrag() {
-    if (!isDragging) return;
-    isDragging = false;
-    handle.classList.remove('dragging');
-    mapWrap.classList.remove('dragging');
-    // Trigger Google Maps resize so the map fills the new container size
-    if (map && google?.maps?.event) {
-      google.maps.event.trigger(map, 'resize');
-    }
-  }
-  
-  handle.addEventListener('touchstart', startDrag, {passive: false});
-  handle.addEventListener('touchmove', onDrag, {passive: false});
-  handle.addEventListener('touchend', endDrag);
-  handle.addEventListener('mousedown', startDrag);
-  document.addEventListener('mousemove', onDrag);
-  document.addEventListener('mouseup', endDrag);
+    mapWrap.classList.toggle('expanded');
+    // Trigger Google Maps resize after the CSS transition
+    setTimeout(() => {
+      if (window.map && window.google && window.google.maps && window.google.maps.event) {
+        window.google.maps.event.trigger(window.map, 'resize');
+      }
+    }, 350);
+  });
 }
-setTimeout(setupMapResize, 500);
+setTimeout(setupMapResize, 800);
 
 // Show mobile UI elements
 function setupMobileUI() {
