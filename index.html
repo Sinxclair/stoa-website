@@ -2581,32 +2581,6 @@ function setupMapResize() {
 }
 setupMapResize();
 setTimeout(setupMapResize, 1500);
-  };
-
-// Show mobile UI elements
-function setupMobileUI() {
-  if (window.innerWidth <= 768) {
-    const hamburger = document.querySelector('.mobile-hamburger');
-    if (hamburger) hamburger.style.display = 'flex';
-    const legend = document.querySelector('.legend');
-    if (legend) legend.onclick = toggleLegend;
-  } else {
-    const hamburger = document.querySelector('.mobile-hamburger');
-    if (hamburger) hamburger.style.display = 'none';
-  }
-}
-setupMobileUI();
-window.addEventListener('resize', setupMobileUI);
-
-// Clear beta session on tab close
-window.addEventListener('beforeunload', async () => {
-  if (betaMode && betaUserId) {
-    try {
-      const q = query(collection(db, 'checkins'), where('userId', '==', betaUserId), limit(50));
-      const snap = await getDocs(q);
-      snap.docs.forEach(d => deleteDoc(doc(db, 'checkins', d.id)).catch(()=>{}));
-    } catch(e) {}
-    sessionStorage.removeItem('stoa_beta');
   }
 });
 
