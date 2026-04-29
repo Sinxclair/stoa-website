@@ -2545,93 +2545,42 @@ function updateCarouselTitle() {
 function setupMapResize() {
   const handle = document.getElementById('map-resize-handle');
   const mapWrap = document.querySelector('.map-wrap');
-  const MIN_PX = 160;
-
-function getMaxPx() {
-  return Math.round(window.innerHeight * 0.8);
-}
-  if (!handle || !mapWrap) return;
-  if (handle.dataset.bound) return; // idempotent — safe to call again
+  if (!handle || !mapWrap || handle.dataset.bound) return;
   handle.dataset.bound = '1';
-
-  const MIN_PX = 160;
-  const getMaxPx = () => Math.max(240, Math.round(window.innerHeight * 0.78));
 
   let dragging = false;
   let startY = 0;
   let startH = 0;
-  let moved = false;
 
-  const triggerMapResize = () => {
-    if (window.map && window.google && window.google.maps && window.google.maps.event) {
-      window.google.maps.event.trigger(window.map, 'resize');
-    }
-  };
-
-  // Remember the .main scroller's scroll position so we can lock it during drag
-  const main = document.querySelector('.main');
-  let savedScroll = 0;
-
-  const onDown = (e) => {
+  handle.addEventListener('touchstart', (e) => {
     if (window.innerWidth > 768) return;
     dragging = true;
-    moved = false;
-    const pt = e.touches ? e.touches[0] : e;
-    startY = pt.clientY;
-    // Read current map height in pixels (works whether height is set via vh or var)
+    startY = e.touches[0].clientY;
     startH = mapWrap.getBoundingClientRect().height;
-    mapWrap.classList.add('dragging');
     handle.classList.add('dragging');
-    // FREEZE the body + main scroller so the page can't scroll under us
-    document.body.classList.add('dragging-handle');
-    if (main) {
-      savedScroll = main.scrollTop;
-      main.style.overflow = 'hidden';
-    }
-    // Capture pointer so we keep getting events even off-element
-    if (e.pointerId !== undefined && handle.setPointerCapture) {
-      try { handle.setPointerCapture(e.pointerId); } catch(_) {}
-    }
-    // Prevent text selection / page scroll while dragging
-    if (e.cancelable) e.preventDefault();
-    e.stopPropagation();
-    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-  };
+    e.preventDefault();
+  }, {passive: false});
 
-  const onMove = (e) => {
+  document.addEventListener('touchmove', (e) => {
     if (!dragging) return;
-    const pt = e.touches ? e.touches[0] : e;
-    const dy = pt.clientY - startY;
-    if (Math.abs(dy) > 4) moved = true;
+    const dy = e.touches[0].clientY - startY;
     let h = startH + dy;
-    h = Math.max(MIN_PX, Math.min(getMaxPx(), h));
-    // Drive height via CSS var so it composes with the @media rule
+    h = Math.max(140, Math.min(window.innerHeight * 0.8, h));
     mapWrap.style.setProperty('--map-h', h + 'px');
-    if (e.cancelable) e.preventDefault();
-    e.stopPropagation();
-    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-  };
+    e.preventDefault();
+  }, {passive: false});
 
-  const onUp = (e) => {
+  document.addEventListener('touchend', () => {
     if (!dragging) return;
     dragging = false;
-    mapWrap.classList.remove('dragging');
     handle.classList.remove('dragging');
-    // UNFREEZE
-    document.body.classList.remove('dragging-handle');
-    if (main) {
-      main.style.overflow = '';
-      main.scrollTop = savedScroll;
+    if (window.map && window.google) {
+      setTimeout(() => google.maps.event.trigger(window.map, 'resize'), 200);
     }
-    // Tap (no real movement) → toggle between compact and expanded
-    if (!moved) {
-      const cur = mapWrap.getBoundingClientRect().height;
-      const compact = Math.round(window.innerHeight * 0.38);
-      const expanded = Math.round(window.innerHeight * 0.65);
-      const target = (cur < (compact + expanded) / 2) ? expanded : compact;
-      mapWrap.style.setProperty('--map-h', target + 'px');
-    }
-    setTimeout(triggerMapResize, 200);
+  });
+}
+setupMapResize();
+setTimeout(setupMapResize, 1500);
   };
 
   // Pointer events cover mouse + modern touch in one shot.
