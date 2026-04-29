@@ -2583,31 +2583,6 @@ setupMapResize();
 setTimeout(setupMapResize, 1500);
   };
 
-  // Pointer events cover mouse + modern touch in one shot.
-  // We ALSO bind touch events directly because iOS Safari sometimes routes
-  // touches through touch events even when PointerEvent is supported.
-  if (window.PointerEvent) {
-    handle.addEventListener('pointerdown', onDown, {passive: false});
-    window.addEventListener('pointermove', onMove, {passive: false});
-    window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onUp);
-  }
-  handle.addEventListener('touchstart', onDown, {passive: false});
-  window.addEventListener('touchmove', onMove, {passive: false});
-  window.addEventListener('touchend', onUp);
-  window.addEventListener('touchcancel', onUp);
-  handle.addEventListener('mousedown', onDown);
-  window.addEventListener('mousemove', onMove);
-  window.addEventListener('mouseup', onUp);
-}
-// Bind as soon as the DOM exists, and again after Maps loads (defensive)
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupMapResize);
-} else {
-  setupMapResize();
-}
-setTimeout(setupMapResize, 1500);
-
 // Show mobile UI elements
 function setupMobileUI() {
   if (window.innerWidth <= 768) {
