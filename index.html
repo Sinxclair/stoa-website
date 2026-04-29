@@ -228,7 +228,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 /* LIST MODE — when "List" tab active, hide map+carousel, give list full screen */
 body.list-mode .map-wrap,
 body.list-mode .map-resize-handle,
-body.list-mode .near-you-section{display:none !important;}
+body.list-mode .near-you-section,
+body.shop-mode .map-wrap,
+body.shop-mode .map-resize-handle,
+body.shop-mode .near-you-section{display:none !important;}
+body.shop-mode .bottom-nav{display:none !important;}
 body.list-mode .panel{flex:1 !important;}
 
 /* HOME MODE — map + carousel only. Hide the long Nearby list (it lives in /list now) */
@@ -421,14 +425,26 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
   .panel-view#view-auth,
   .panel-view#view-friends{
     position:fixed !important;
-    top:44px !important;          /* match topbar min-height */
+    top:44px !important;
     left:0 !important;
     right:0 !important;
-    bottom:64px !important;       /* leave room for the bottom nav */
+    bottom:0 !important;
     z-index:80;
     background:var(--cream);
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
+  }
+  /* Sticky back button on detail pages so it never scrolls away */
+  .panel-view#view-shop .back-link,
+  .panel-view#view-auth .back-link,
+  .panel-view#view-friends .back-link{
+    position:sticky;
+    top:0;
+    background:white;
+    padding:10px 18px;
+    margin:0;
+    z-index:5;
+    border-bottom:1px solid rgba(28,15,6,0.06);
   }
   /* Profile, Feed, Favorites — flow inline like Nearby (so bottom nav works) */
   .panel-view#view-profile,
@@ -2290,11 +2306,12 @@ window.signOutUser = async function() {
   toast('Signed out!');
 };
 
-function showPanel(id){ 
+function showPanel(id){
+  document.body.classList.toggle('shop-mode', id === 'shop' || id === 'auth' || id === 'friends');
   document.querySelectorAll('.panel-view').forEach(v=>{
     v.classList.remove('on');
     v.style.display='none';
-  }); 
+  });
   const target = document.getElementById('view-'+id);
   target.classList.add('on');
   target.style.display='flex';
@@ -2573,6 +2590,7 @@ function setupMapResize() {
     // Prevent text selection / page scroll while dragging
     if (e.cancelable) e.preventDefault();
     e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
   };
 
   const onMove = (e) => {
@@ -2586,6 +2604,7 @@ function setupMapResize() {
     mapWrap.style.setProperty('--map-h', h + 'px');
     if (e.cancelable) e.preventDefault();
     e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
   };
 
   const onUp = (e) => {
@@ -2610,22 +2629,22 @@ function setupMapResize() {
     setTimeout(triggerMapResize, 200);
   };
 
-  // Pointer events cover mouse + modern touch in one shot
+  // Pointer events cover mouse + modern touch in one shot.
+  // We ALSO bind touch events directly because iOS Safari sometimes routes
+  // touches through touch events even when PointerEvent is supported.
   if (window.PointerEvent) {
-    handle.addEventListener('pointerdown', onDown);
+    handle.addEventListener('pointerdown', onDown, {passive: false});
     window.addEventListener('pointermove', onMove, {passive: false});
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
-  } else {
-    // Fallback for old Safari that doesn't have PointerEvent
-    handle.addEventListener('touchstart', onDown, {passive: false});
-    window.addEventListener('touchmove', onMove, {passive: false});
-    window.addEventListener('touchend', onUp);
-    window.addEventListener('touchcancel', onUp);
-    handle.addEventListener('mousedown', onDown);
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
   }
+  handle.addEventListener('touchstart', onDown, {passive: false});
+  window.addEventListener('touchmove', onMove, {passive: false});
+  window.addEventListener('touchend', onUp);
+  window.addEventListener('touchcancel', onUp);
+  handle.addEventListener('mousedown', onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
 }
 // Bind as soon as the DOM exists, and again after Maps loads (defensive)
 if (document.readyState === 'loading') {
