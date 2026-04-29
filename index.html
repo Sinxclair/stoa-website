@@ -37,6 +37,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
 .main{display:flex;flex:1;overflow:hidden;position:relative;}
 .map-wrap{flex:1;position:relative;overflow:hidden;}
 #map{position:absolute;inset:0;}
+.map-toggle-btn{display:none;} /* hidden on desktop, mobile media query overrides */
 
 /* LEGEND */
 .legend{position:absolute;bottom:20px;left:16px;background:white;border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:6px;box-shadow:0 2px 12px rgba(28,15,6,0.14);z-index:10;}
@@ -301,11 +302,15 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
     overflow:hidden;
     transition:height 0.3s ease;
   }
+  body .map-wrap.size-medium,
   .map-wrap.size-medium{
     height:55vh !important;
+    min-height:55vh !important;
   }
+  body .map-wrap.size-large,
   .map-wrap.size-large{
     height:75vh !important;
+    min-height:75vh !important;
   }
 
   /* MAP TOGGLE BUTTON — expand/collapse map size */
@@ -325,9 +330,11 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
     box-shadow:0 2px 12px rgba(28,15,6,0.18);
     cursor:pointer;
     z-index:6;
-    display:flex;
+    display:flex !important;
     align-items:center;
     gap:5px;
+    -webkit-tap-highlight-color:rgba(0,0,0,0.1);
+    touch-action:manipulation;
   }
   .map-toggle-btn:active{
     transform:translateX(-50%) scale(0.95);
@@ -495,7 +502,7 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
     <div class="map-wrap" id="map-wrap">
       <div id="map"></div>
       <button class="locate-btn" onclick="zoomToMe()" title="Find my location">📍</button>
-      <button class="map-toggle-btn" id="map-toggle-btn" onclick="if(window.toggleMapSize)toggleMapSize()" style="display:none;">
+      <button class="map-toggle-btn" id="map-toggle-btn" type="button" onclick="window.toggleMapSize && window.toggleMapSize()" ontouchend="event.preventDefault(); window.toggleMapSize && window.toggleMapSize();">
         <span id="map-toggle-icon">⤢</span>
         <span id="map-toggle-label">Bigger map</span>
       </button>
@@ -2567,9 +2574,11 @@ window.toggleMapSize = function() {
   const wrap = document.getElementById('map-wrap');
   const icon = document.getElementById('map-toggle-icon');
   const label = document.getElementById('map-toggle-label');
-  if (!wrap) return;
+  if (!wrap) { console.warn('[STOA] map-wrap not found'); return; }
+  console.log('[STOA] toggleMapSize called. current classes:', wrap.className);
   if (wrap.classList.contains('size-large')) {
     wrap.classList.remove('size-large');
+    wrap.classList.remove('size-medium');
     if (icon) icon.textContent = '⤢';
     if (label) label.textContent = 'Bigger map';
   } else if (wrap.classList.contains('size-medium')) {
@@ -2582,19 +2591,24 @@ window.toggleMapSize = function() {
     if (icon) icon.textContent = '⤢';
     if (label) label.textContent = 'Bigger map';
   }
+  console.log('[STOA] toggleMapSize after. new classes:', wrap.className);
   setTimeout(function() {
     if (window.map && window.google && window.google.maps && window.google.maps.event) {
       window.google.maps.event.trigger(window.map, 'resize');
     }
-  }, 300);
+  }, 320);
 };
-function setupMapToggleButton() {
+// Belt-and-suspenders: also bind via addEventListener in case onclick is stripped
+(function attachMapToggle(){
   const btn = document.getElementById('map-toggle-btn');
-  if (!btn) return;
-  btn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
-}
-setupMapToggleButton();
-window.addEventListener('resize', setupMapToggleButton);
+  if (!btn) { console.warn('[STOA] map-toggle-btn not found at attach time'); return; }
+  btn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    window.toggleMapSize();
+  });
+  console.log('[STOA] map toggle button click listener attached');
+})();
 
 
 // ── Boot ──
