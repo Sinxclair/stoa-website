@@ -11,8 +11,8 @@
   --esp:#1C0F06;--cream:#F5EDE0;--warm:#E8D5BC;--gold:#C8922A;
   --sage:#5C7A5F;--rust:#B5511A;--empty:#5C7A5F;--mod:#C8922A;--full:#B5511A;--blue:#4A90D9;
 }
-html,body{height:100%;overflow:hidden;}
-body{font-family:'DM Sans',sans-serif;background:var(--esp);color:var(--esp);}
+html,body{min-height:100%;overflow-x:hidden;overflow-y:auto;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--esp);}
 .app{display:flex;flex-direction:column;height:100vh;}
 
 /* TOP BAR */
@@ -280,48 +280,51 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
   .mobile-menu-item:hover{background:rgba(245,237,224,0.05);}
   .mobile-menu-item.gold{color:var(--gold);font-weight:500;}
 
-  /* MAIN — scrollable column on mobile */
+  /* MAIN — fixed height */
   .main{
-    display:flex;
-    flex-direction:column;
-    flex:1;
-    overflow-y:auto;
-    overflow-x:hidden;
-    -webkit-overflow-scrolling:touch;
-    padding-bottom:60px; /* space for bottom nav */
+    display:flex !important;
+    flex-direction:column !important;
+    height:calc(100vh - 44px) !important;
+    overflow:hidden !important;
+    background:var(--cream);
   }
 
-  /* MAP — three sizes via toggle button. Fixed heights, no flex magic. */
+  /* MAP — fixed height calc */
   .map-wrap{
     position:relative !important;
     width:100% !important;
+    height:calc(100vh - 270px) !important;
     flex:0 0 auto !important;
-    height:32vh !important;
-    min-height:32vh !important;
-    max-height:32vh !important;
     border-radius:0 0 16px 16px;
     overflow:hidden;
-    transition:height 0.3s ease, min-height 0.3s ease, max-height 0.3s ease;
-  }
-  body .map-wrap.size-medium,
-  .map-wrap.size-medium{
-    height:55vh !important;
-    min-height:55vh !important;
-    max-height:55vh !important;
+    transition:height 0.3s ease;
   }
   body .map-wrap.size-large,
   .map-wrap.size-large{
-    height:78vh !important;
-    min-height:78vh !important;
-    max-height:78vh !important;
+    flex:1 1 auto !important;
+    height:calc(100vh - 115px) !important;
   }
 
-  /* CAROUSEL on mobile — always visible, sized to content */
+  /* CAROUSEL — fixed height */
   body.home-mode .near-you-section{
     display:block !important;
+    height:155px !important;
+    flex:0 0 155px !important;
+    padding:12px 0 10px !important;
+    overflow:hidden !important;
+  }
+  body.home-mode .map-wrap.size-large ~ .near-you-section,
+  body.home-mode.large-active .near-you-section{
+    display:none !important;
+  }
+  body.home-mode .near-you-scroll{
     flex:0 0 auto !important;
-    min-height:0 !important;
-    padding:14px 0 12px !important;
+    align-items:flex-start !important;
+    overflow-y:hidden !important;
+  }
+  body.home-mode .near-you-card{
+    height:auto !important;
+    align-self:flex-start !important;
   }
   .near-you-header{padding:0 16px 10px !important;}
   .near-you-title{font-size:17px !important;}
@@ -329,7 +332,7 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
   .near-you-card-img{display:none !important;}
   .near-you-card-body{padding:10px 11px 11px !important;}
 
-  /* MAP TOGGLE BUTTON — top of map, always visible */
+  /* MAP TOGGLE BUTTON — top of map normally, bottom when expanded */
   .map-toggle-btn{
     position:absolute;
     top:12px;
@@ -352,6 +355,11 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
     -webkit-tap-highlight-color:rgba(0,0,0,0.1);
     touch-action:manipulation;
     white-space:nowrap;
+    transition:top 0.3s ease, bottom 0.3s ease;
+  }
+  .map-wrap.size-large .map-toggle-btn{
+    top:auto;
+    bottom:14px;
   }
   .map-toggle-btn:active{
     transform:translateX(-50%) scale(0.95);
@@ -519,7 +527,7 @@ body.dragging-handle{overflow:hidden !important; touch-action:none !important;}
     <div class="map-wrap" id="map-wrap">
       <div id="map"></div>
       <button class="locate-btn" onclick="zoomToMe()" title="Find my location">📍</button>
-      <button class="map-toggle-btn" id="map-toggle-btn" type="button" onclick="window.toggleMapSize && window.toggleMapSize()" ontouchend="event.preventDefault(); window.toggleMapSize && window.toggleMapSize();">
+      <button class="map-toggle-btn" id="map-toggle-btn" type="button">
         <span id="map-toggle-icon">⤢</span>
         <span id="map-toggle-label">Bigger map</span>
       </button>
@@ -1106,6 +1114,7 @@ window.initMap = function() {
     disableDefaultUI:false, zoomControl:true, mapTypeControl:false, streetViewControl:false, fullscreenControl:false,
     gestureHandling: 'greedy',
   });
+  window.map = map;
 
   placesService = new google.maps.places.PlacesService(map);
   geocoder = new google.maps.Geocoder();
@@ -2586,26 +2595,23 @@ window.zoomToMe = function() {
   );
 };
 
-// ── Map size toggle (mobile only) ──
+// ── Map size toggle (mobile only) — two states: small (with cards) or large (no cards) ──
 window.toggleMapSize = function() {
   const wrap = document.getElementById('map-wrap');
   const icon = document.getElementById('map-toggle-icon');
   const label = document.getElementById('map-toggle-label');
+  const body = document.body;
   if (!wrap) { console.warn('[STOA] map-wrap not found'); return; }
   if (wrap.classList.contains('size-large')) {
     wrap.classList.remove('size-large');
-    wrap.classList.remove('size-medium');
+    body.classList.remove('large-active');
     if (icon) icon.textContent = '⤢';
     if (label) label.textContent = 'Bigger map';
-  } else if (wrap.classList.contains('size-medium')) {
-    wrap.classList.remove('size-medium');
-    wrap.classList.add('size-large');
-    if (icon) icon.textContent = '⤡';
-    if (label) label.textContent = 'Smaller map';
   } else {
-    wrap.classList.add('size-medium');
-    if (icon) icon.textContent = '⤡';
-    if (label) label.textContent = 'Smaller map';
+    wrap.classList.add('size-large');
+    body.classList.add('large-active');
+    if (icon) icon.textContent = '↓';
+    if (label) label.textContent = 'Show cards';
   }
   setTimeout(function() {
     if (window.map && window.google && window.google.maps && window.google.maps.event) {
